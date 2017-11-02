@@ -1,0 +1,110 @@
+macro True: 1
+macro False: 0
+
+# mapping from account address to current balance
+data _accountBalances[2^256]
+
+# mapping from account owner to accounts allowed to withdraw specified amounts
+data _approvals[2^256][2^256]
+
+# total amount of tokens deposited
+data total_supply
+
+def deposit(_sender: address, _msg_value: uint256):
+    # use unsigned LT(x, y)
+    if ( lt(self.total_supply + _msg_value, self.total_supply) ):
+        return(False:bool)
+
+    self._accountBalances[_sender] += _msg_value
+    self.total_supply += _msg_value
+    return(True:bool)
+
+def withdraw(_sender: address, _msg_value: uint256, _value: uint256):
+    if ( _msg_value != 0 ):
+        return(False:bool)
+
+    # sender has enough resources AND send worked
+    if ( lt(self._accountBalances[_sender], _value) ):
+        return(False:bool)
+
+    # reduce funds BEFORE we send
+    self._accountBalances[_sender] -= _value
+    self.total_supply -= _value
+
+    ret = array(4)
+    ret[0] = True
+    ret[1] = True
+    ret[2] = _sender
+    ret[3] = _value
+    RETURN(ret, 0x80)
+    
+def const totalSupply(_sender: address, _msg_value: uint256):
+    if ( _msg_value != 0 ):
+        return(False:bool)
+
+    ret = array(2)
+    ret[0] = True
+    ret[1] = self.total_supply
+    RETURN(ret, 0x40)
+
+def const balanceOf(_sender: address, _msg_value: uint256, _owner: address):
+    if ( _msg_value != 0 ):
+        return(False:bool)
+
+    ret = array(2)
+    ret[0] = True
+    ret[1] = self._accountBalances[_owner]
+    RETURN(ret, 0x40)
+
+def transfer(_sender: address, _msg_value: uint256, _to: address, _value: uint256):
+    if ( _msg_value != 0 ):
+        return(False:bool)
+
+    # sender has enough resources
+    if ( self._accountBalances[_sender] >= _value ):
+
+        self._accountBalances[_sender] -= _value
+        self._accountBalances[_to] += _value
+        ret = array(2)
+        ret[0] = True
+        ret[1] = True
+        RETURN(ret, 0x40)
+
+    else:
+        return(False:bool)
+
+def transferFrom(_sender: address, _msg_value: uint256, _from: address, _to: address, _value: uint256):
+    if ( _msg_value != 0 ):
+        return(False:bool)
+
+    # sender is approved to withdraw AND origin account has enough resources
+    if ( self._approvals[_from][_sender] >= _value && self._accountBalances[_from] >= _value ):
+        self._approvals[_from][_sender] -= _value
+        self._accountBalances[_from] -= _value
+        self._accountBalances[_to] += _value
+        ret = array(2)
+        ret[0] = True
+        ret[1] = True
+        RETURN(ret, 0x40)
+
+    else:
+        return(False:bool)
+
+def approve(_sender: address, _msg_value: uint256, _spender: address, _value: uint256):
+    if ( _msg_value != 0 ):
+        return(False:bool)
+
+    self._approvals[_sender][_spender] = _value
+    ret = array(2)
+    ret[0] = True
+    ret[1] = True
+    RETURN(ret, 0x40)
+
+def allowance(_sender: address, _msg_value: uint256, _owner: address, _spender: address):
+    if ( _msg_value != 0 ):
+        return(False:bool)
+
+    ret = array(2)
+    ret[0] = True
+    ret[1] = self._approvals[_owner][_spender]
+    RETURN(ret, 0x40)

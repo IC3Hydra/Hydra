@@ -1,0 +1,41 @@
+;; A generic forwarding contract that forwards any transaction to
+;; a main contract (using DELEGATECALL) whose address is hardcoded.
+
+;; top [] bottom
+PC
+;; [0]
+push "main________________"
+;; [main, 0] 
+CALLDATASIZE
+;; [calldatasize, main, 0]
+DUP1
+;; [calldatasize, calldatasize, main, 0]
+DUP4
+;; [0, calldatasize, calldatasize, main, 0]
+DUP1
+;; [0, 0, calldatasize, calldatasize, main, 0]
+CALLDATACOPY
+;; [calldatasize, main, 0]
+DUP3
+;; [0, calldatasize, main, 0]
+DUP1
+;; [0, 0, calldatasize, main, 0]
+SWAP2
+;; [calldatasize, 0, 0, main, 0]
+DUP5
+;; [0, calldatasize, 0, 0, main, 0]
+DUP5
+;; [to=main, 0, calldatasize, 0, 0, main, 0]
+push 255
+;; [255, to, 0, calldatasize, 0, 0, main, 0]
+GAS
+;; [available gas, 255, to, 0, calldatasize, 0, 0, main, 0]
+SUB
+;; [available gas - 255, to, 0, calldatasize, 0, 0, main, 0]
+DELEGATECALL
+;; [success, main, 0]
+NOTZERO
+;; [failure, main, 0]
+DUP3
+;; [0 (invalid jump dest), failure, main, 0]
+JUMPI

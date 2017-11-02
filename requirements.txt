@@ -1,0 +1,14 @@
+# make sure you're running python >= 3.6
+# there are a number of non-python dependencies. If you're using
+# brew, the following should install them for you:
+#    brew install pkg-config libffi autoconf automake libtool openssl
+
+Jinja2
+# version 1.1.2 is broken
+py_ecc==1.1.1
+pycryptodome
+numpy
+git+https://github.com/ethereum/pyethereum.git
+git+https://github.com/ethereum/serpent.git
+git+https://github.com/ethereum/viper.git
+git+https://github.com/pipermerriam/web3.py@3115ef233ee71740eae455d1cf5325084bf4809d

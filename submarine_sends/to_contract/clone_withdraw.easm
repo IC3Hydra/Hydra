@@ -1,0 +1,75 @@
+;; This contract can do two things:
+;; If it is called by its owner with non-empty transaction input,
+;; it will send its entire balance to the owner.
+;; Otherwise, it will create an exact copy of itself.
+;;
+;; `"...................."` is a placeholder for the address of 
+;; the owner.
+
+;; top [] bottom
+PC
+;; [0]
+push "...................." 
+;; [owner, 0] 
+DUP1
+;; [owner, owner, 0]
+CALLER
+;; [caller, owner, owner, 0]
+EQ
+;; [caller == owner, owner, 0]
+CALLDATASIZE
+;; [calldatasize, caller == owner, owner, 0]
+MUL
+;; [calldatasize AND caller == owner, owner, 0]
+push  59
+;; [jumpdest, calldatasize AND caller == owner, owner, 0]
+JUMPI
+;; [owner, 0]
+push 27350796776578617308224258803
+;; [0x58600c8038038082843982f3, owner, 0]
+DUP3
+;; [0, 0x58600c8038038082843982f3, owner, 0]
+MSTORE
+;; [owner, 0] 
+CODESIZE
+;; [codesize, owner, 0]
+DUP1
+;; [codesize, codesize, owner, 0]
+DUP4
+;; [0, codesize, codesize, owner, 0]
+push 32
+;; [32, 0, codesize, codesize, owner, 0]
+CODECOPY
+;; [codesize, owner, 0]
+push 12 
+;; [12, codesize, owner, 0]
+ADD
+;; [12 + codesize, owner, 0]
+push 20
+;; [20, 12 + codesize, owner, 0]
+DUP4
+;; [0, 20, 12 + codesize, owner, 0]
+CREATE
+;; [new contract addres, owner, 0]
+STOP
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; withdrawal branch
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; [owner, 0]
+JUMPDEST
+DUP2
+;; [0, owner, 0]
+DUP1
+DUP1
+DUP1
+;; [0, 0, 0, 0, owner, 0]
+ADDRESS
+;; [address, 0, 0, 0, 0, owner, 0]
+BALANCE
+;; [balance, 0, 0, 0, 0, owner, 0]
+DUP6
+;; [to, balance, 0, 0, 0, 0, owner, 0]
+DUP8
+;; [0, to, balance, 0, 0, 0, 0, owner, 0]
+CALL
+;; [call result, owner, 0]

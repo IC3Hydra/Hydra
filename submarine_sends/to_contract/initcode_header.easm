@@ -1,0 +1,28 @@
+;; You can prepend this as a header to any contract
+;; that doesn't require storage initialisation.
+;; The resulting bytecode can be used as a payload to
+;; CREATE or web3.eth.contract([]).new(...).
+
+;; top [] bottom
+PC
+;; [0]
+push 12
+;; [header size, 0]
+DUP1
+;; [header size, header size, 0]]
+CODESIZE
+;; [code size, header size, header size, 0]
+SUB
+;; [payload size, header size, 0]
+DUP1
+;; [payload size, payload size, header size, 0]
+DUP3
+;; [header size, payload size, payload size, header size, 0]
+DUP5
+;; [0, header size, payload size, payload size, header size, 0]
+CODECOPY
+;; [payload size, header size, 0]
+DUP3
+;; [0, payload size, header size, 0]
+RETURN
+;; [header size, 0]
