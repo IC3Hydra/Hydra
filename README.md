@@ -39,18 +39,9 @@ an example deployment script looks something like this:
 heads = ['examples/ERC20/heads/' + file
 		 for file in ('ERC20_florian.se', 'ERC20_florian.sol', 'ERC20_lorenz.sol', 'ERC20_phil.vy')]
 
-# Choose which Geth node to use
-if args.p:
-	GETH_DATADIR = '/home/debian/geth_mainnet'
-	creator_addr = "0x19cb3f2df61612fde94b3f339c45ff88cf682e0e"
-
-if args.l:
-	GETH_DATADIR = '/Users/lorenz/geth-myrtle'
-	creator_addr = "0x48286a59a30d239ae5e70855e8940386de6134f6"
-
-if args.f:
-	GETH_DATADIR = '/Users/floriantramer/Library/Ethereum/MyNode/'
-	creator_addr = "0x4e6e90a33f4b025cf6b3e5e5ed7c196d841d7fc7"
+# Change these
+GETH_DATADIR = '/home/example/geth_mainnet'
+creator_addr = "0x12345"
 	
 # Create a Hydra contract and deploy
 d = RPCHydraDeployment(creator_addr, "hydra/metacontract/Hydra.sol", heads, GETH_DATADIR)
