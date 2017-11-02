@@ -102,3 +102,16 @@ Differential testing on the heads (Currently fails):
 Run tests against the hydra MontyHall contract:
 
 `TODO`
+
+# Acknowledgements
+
+This material is based upon work supported by the National Science 
+Foundation Graduate Research Fellowship under Grant No. .
+
+We would also like to thank NSF CNS-1330599, CNS-1514163, CNS-1564102, 
+and CNS-1704615, ARL W911NF-16-1-0145, and IC3 Industry Partners.
+
+Any opinion, findings, and conclusions or recommendations expressed in 
+this material are those of the authors(s) and do not necessarily 
+reflect the views of the National Science Foundation.
+
