@@ -45,7 +45,7 @@ class RPCHydraDeployment(HydraDeployment):
         abi = get_abi('/tmp/1', language)
         if language == "solidity":
             raw_output = check_output(['solc', '--combined-json', 'abi,bin', '/tmp/1'],
-                input=code.encode('utf-8'))
+                                      input=code.encode('utf-8'))
             output = json.loads(raw_output)
             assert len(output['contracts']) == 1
 
@@ -54,11 +54,11 @@ class RPCHydraDeployment(HydraDeployment):
         elif language == 'viper':
             print("COMPILED {}...".format(language))
             return check_output(['viper', '/tmp/1'],
-                        input=code.encode('utf-8')), abi
+                                input=code.encode('utf-8')), abi
         elif language == 'serpent':
             print("COMPILED {}...".format(language))
             return check_output(['serpent', 'compile', '/tmp/1'],
-                        input=code.encode('utf-8')), abi
+                                input=code.encode('utf-8')), abi
         else:
             raise ValueError("inappropriate language argument")
 
@@ -106,19 +106,18 @@ if __name__ == '__main__':
         GETH_DATADIR = '/home/debian/geth_mainnet'
         creator_addr = "0x48286a59a30d239ae5e70855e8940386de6134f6"
 
-
     if args.l:
         GETH_DATADIR = '/Users/lorenz/geth-myrtle'
         creator_addr = "0x48286a59a30d239ae5e70855e8940386de6134f6"
 
     if args.f:
         GETH_DATADIR = '/Users/floriantramer/Library/Ethereum/MyNode/'
-        creator_addr = "0x48286a59a30d239ae5e70855e8940386de6134f6"
+        creator_addr = "0x4e6e90a33f4b025cf6b3e5e5ed7c196d841d7fc7"
 
     d = RPCHydraDeployment(creator_addr, "hydra/metacontract/Hydra.sol", heads, GETH_DATADIR)
     contracts = d.build_and_deploy(include_constructor=False, debug=False)
 
-    mc_abi = d.abi_object(heads[1])
+    mc_abi = d.abi_object(heads[-1])
     mc_addr = '0x' + utils.encode_hex(contracts[0][0])
 
     if args.test:

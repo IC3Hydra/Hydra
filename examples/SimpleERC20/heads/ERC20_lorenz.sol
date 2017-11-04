@@ -1,4 +1,5 @@
-pragma solidity ^0.4.10;
+pragma solidity ^0.4.18;
+
 contract Token {
     // owner -> amount
     mapping(address => uint256) balances;

@@ -181,6 +181,12 @@ contract SimpleERC20 {
         // execute all heads one after the other
         for (uint i = 0; i < heads.length; ++i) {                               // 200 GAS
 
+            for (uint k = retValMem; k < retValMem + outputSize ; k+=0x20) {
+                assembly {
+                    mstore(k, 0)
+                }
+            }
+
             // call the head. skip the signature of `multiCall` in the args
             callSuccess = callHead(i,
                                    args,

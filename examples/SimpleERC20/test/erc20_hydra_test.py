@@ -16,9 +16,8 @@ config_string = ':trace'
 def deploy_erc20_mc(_tester, chain):
     mc_path = META_CONTRACT
     head_files = [
-        #PATH_TO_HEADS + 'ERC20_florian.sol',
+        PATH_TO_HEADS + 'ERC20_florian.sol',
         PATH_TO_HEADS + 'ERC20_florian.se',
-        PATH_TO_HEADS + 'ERC20_lorenz.sol',
         PATH_TO_HEADS + 'ERC20_lorenz.sol',
         PATH_TO_HEADS + 'ERC20_phil.vy',
         ]
