@@ -47,10 +47,11 @@ class RPCHydraDeployment(HydraDeployment):
             raw_output = check_output(['solc', '--combined-json', 'abi,bin', '/tmp/1'],
                                       input=code.encode('utf-8'))
             output = json.loads(raw_output)
-            assert len(output['contracts']) == 1
-
+            contracts = [c['bin'] for c in output['contracts'].values() if c['abi'] != '[]']
+            assert len(contracts) == 1
             print("COMPILED {}...".format(language))
-            return list(output['contracts'].values())[0]['bin'], abi
+
+            return contracts[0], abi
         elif language == 'viper':
             print("COMPILED {}...".format(language))
             return check_output(['viper', '/tmp/1'],

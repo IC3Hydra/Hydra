@@ -14,10 +14,112 @@
  *  | throw (OOG)    | N.A.           | return "throw" | throw      |
  *  =================================================================
  */
+pragma solidity ^0.4.18;
 
-pragma solidity ^0.4.11;
+contract ASMUtils {
+    function _calldataload(uint256 startPos) internal pure returns (bytes32 word) {
+        assembly {
+            word := calldataload(startPos)
+        }
+    }
 
-contract HydraContract {
+    function _malloc(uint256 size) internal pure returns (uint256 memStart) {
+        assembly {
+            memStart := mload(0x40)
+            mstore(0x40, add(memStart, size))
+        }
+    }
+
+    function _mstore(uint256 memPos, bytes32 word) internal pure {
+        assembly {
+            mstore(memPos, word)
+        }
+    }
+
+    function _mload(uint256 memPos) internal pure returns (bytes32 word) {
+        assembly {
+            word := mload(memPos)
+        }
+    }
+
+    function _arrayMemPos(bytes b) internal pure returns (uint256 mem) {
+        assembly{
+            mem := b
+        }
+    }
+
+    function _return(uint256 memPos, uint256 len) internal pure {
+        assembly {
+            return(memPos, len)
+        }
+    }
+
+    function _returnVal(uint256 val) internal pure {
+        assembly {
+            let mem := mload(0x40)
+            mstore(mem, val)
+            return(mem, 32)
+        }
+    }
+
+    function _calldatacopy(uint256 memPos, uint256 callDataPos, uint256 len) internal pure {
+        assembly {
+            calldatacopy(memPos, callDataPos, len)
+        }
+    }
+
+    function _call(uint256 gasAmount, address dest, uint256 val, uint256 argsMem, uint256 argsLen) internal returns (bool callSuccess) {
+        assembly {
+            callSuccess := call(gasAmount, dest, val, argsMem, argsLen, 0x0, 0x0)
+        }
+    }
+
+    function _returndatasize() internal pure returns (uint256 size) {
+        assembly {
+            size := returndatasize
+        }
+    }
+
+    function _returndatacopy(uint256 memPos, uint256 retDataPos, uint256 len) internal pure {
+        assembly {
+            returndatacopy(memPos, retDataPos, len)
+        }
+    }
+
+    function _keccak256(uint256 memPos, uint256 len) internal pure returns (bytes32 hash) {
+        assembly {
+            hash := keccak256(memPos, len)
+        }
+    }
+
+    function _getReturnData() internal pure returns (uint256 memPos) {
+        uint256 retSize;
+
+        assembly {
+            retSize := returndatasize
+        }
+
+        memPos = _malloc(retSize);
+        _returndatacopy(memPos, 0, retSize);
+        return memPos;
+    }
+
+    function _revert(uint256 memPos, uint256 len) internal pure {
+        assembly {
+            revert(memPos, len)
+        }
+    }
+
+    function _revertVal(uint256 val) internal pure {
+        assembly {
+            let mem := mload(0x40)
+            mstore(mem, val)
+            revert(mem, 32)
+        }
+    }
+}
+
+contract HydraContract is ASMUtils {
 
     /* ------- begin events ------- */
     event MultiCallReturn(bytes4 sig, uint256 retSize, bool callSuccess);
@@ -78,12 +180,8 @@ contract HydraContract {
 
     /* ------- begin constant vars ------- */
 
-    // Maximum number of bytes for the return value of a head
-    // Does not include the first word that specifies the actual output size
-    uint256 constant MAX_RETURN_BYTES =  0x100;
-
     // Signature of the `multiCall` function
-    bytes4 constant MULTI_CALL_SIG = bytes4(sha3("multiCall()"));
+    bytes4 constant MULTI_CALL_SIG = bytes4(keccak256("multiCall()"));
 
     // Values used to differentiate between the type of head callbacks
     uint256 CALLBACK_TYPE_LOG = 4;
@@ -92,13 +190,6 @@ contract HydraContract {
 
     // set to `true` to have the meta contract log events
     bool constant DEBUG_MODE /*__JINJA_TEMPLATE__;= {{ 'true' if debug else 'false' }}; /*__JINJA_TEMPLATE__*/ = false;
-
-    // used to count gas costs when DEBUG_MODE is on/off
-    uint constant DEBUG_MODE_MUL = DEBUG_MODE ? 1 : 0;
-
-    // rough estimate of gas used in the main loop of `multiCall`
-    uint256 MULTI_CALL_LOOP_GAS = 200 + 200 + 700 + 200 + (DEBUG_MODE_MUL * 2 * 1125) + (MAX_RETURN_BYTES/8 * 6);
-
     /* ------- end constant vars ------- */
 
 
@@ -106,7 +197,7 @@ contract HydraContract {
      * CONSTRUCTOR
      * Takes as argument the bounty value in WEI
      */
-    function HydraContract() payable {
+    function HydraContract() public payable {
         bountyValue = msg.value;
         creator = msg.sender;
     }
@@ -122,7 +213,19 @@ contract HydraContract {
      */
     function() external payable {
 
-        bool isHydraInitCall = false;
+        /*
+         * check if this is a callback from one of the heads.
+         * MUST BE PLACED AFTER THE RE-ENTRANCY LOCK CHECK
+         */
+        for (uint i = 0; i < heads.length; i++) {
+            if (msg.sender == heads[i]) {
+                headCallback();
+                return;
+            }
+        }
+
+        // non-reentrancy lock
+        assert(nextCall == 0);
 
         // get the signature of the called function
         bytes4 sig = msg.sig;
@@ -134,7 +237,10 @@ contract HydraContract {
         /*__JINJA_TEMPLATE__
         IMPORTANT: THE TEMPLATE BELOW SHOULD BE EVALUATED AND THE PLACEHOLDER
         REPLACED BY THE SIGNATURE OF THE HYDRA_INIT FUNCTION;
+
         {% if init_sig != None %}
+        bool isHydraInitCall = false;
+
         if ( sig == {{init_sig}} ) {
             isHydraInitCall = true;
         }
@@ -151,14 +257,6 @@ contract HydraContract {
 
         // the contract cannot be called if the bounty has been claimed
         assert(!bountyClaimed);
-
-        // check if this is a callback from one of the heads
-        for (uint i = 0; i < heads.length; i++) {
-            if (msg.sender == heads[i]) {
-                headCallback();
-                return;
-            }
-        }
 
         /*
          * Check that the caller is calling a function that is defined in all
@@ -178,134 +276,67 @@ contract HydraContract {
         //{{success_msg}}
         /*__JINJA_TEMPLATE__*/revert();
 
-        // non-reentrancy lock
-        assert(nextCall == 0);
-
         /*
-         * Maximum byte size of the return value from a head. The structure of
-         * the returned data is [retSize retVal numCalls] where retSize is
-         * a word specifying the actual length of the return value, retVal is
-         * a sequence of length `MAX_RETURN_BYTES` containing the return value
-         * in the first `retSize` bytes and numCalls is a word specifiyng the
-         * number of callbacks that were made.
+         * arguments for `multiCall()`
          */
-        uint256 outputSize = 0x20 + MAX_RETURN_BYTES + 0x20;
+        uint256 mem = _malloc(msg.data.length + 4 + 32 + 32);
+        _mstore(mem, bytes32(MULTI_CALL_SIG));
+        _mstore(mem + 4, bytes32(msg.sender));
+        _mstore(mem + 4 + 32, bytes32(msg.value));
+        _calldatacopy(mem + 4 + 32 + 32, 0, msg.data.length);
 
-        // allocate memory to store the return value
-        uint256 retValMem;
-        assembly {
-            retValMem := mload(0x40)              // free memory pointer
-            mstore(0x40,                          // allocate max output size
-                   add(retValMem, outputSize))
-        }
+        bool callSuccess = _call(msg.gas, this, 0, mem, msg.data.length + 4 + 32 + 32);
 
-        /*
-         * Status of the call to `multiCall`. If `multiCall` fails, we pay
-         * out the bounty.
-         */
-        bool callSuccess;
-
-        /*
-         * signature of `multiCall()`
-         */
-        bytes4 multiCallSig = MULTI_CALL_SIG;
-
-        /*
-         * Make sure that there will be enough gas for `multiCall` to work
-         */
-        uint256 totCost = totalGasCost(msg.data.length);
-        assert( msg.gas >= totCost );
-
-        /*
-         * The call to `multiCall` will have the following arguments:
-         *
-         * [multiCallSig(0x4) msg.sender(0x20) msg.value(0x20) calldata(calldatasize)]
-         *
-         * The return value will be of the form:
-         *
-         * [retSize(0x20) output(retSize) numCallbacks(0x20)]
-         */
-        assembly {
-            let x := mload(0x40)                // Get a free memory pointer
-            mstore(x, multiCallSig)             // Copy signature of multiCall
-
-            mstore(add(x, 0x4), caller)         // the original message sender
-            mstore(add(x, 0x24), callvalue)     // the original message value
-
-            calldatacopy(add(x, 0x44),
-                         0x0, calldatasize)     // Copy this call's calldata    // calldatasize * 3 GAS
-
-            mstore(0x40,                        // reset free memory pointer
-                   add(x, add(0x44, calldatasize)))
-
-            callSuccess := call(
-                gas,                        // Give all gas                     // 700 GAS
-                address,                    // Destination address
-                0x0,                        // Value sent in extra arg
-                x,                          // Inputs start here
-                add(0x44, calldatasize),    // Total length of inputs
-                retValMem,                  // Outputs written here
-                outputSize)                 // Size of outputs
-        }
+        uint256 retSize = _returndatasize();
 
         if ( !callSuccess ) {
-            // If we're here, `multiCall` threw to indicate a discrepancy
+            if ( retSize > 0 ) {
+                // If we're here, `multiCall` reverted to indicate a discrepancy
 
-            if (DEBUG_MODE) {
-                MultiCallReturn(sig, 0x0, callSuccess);                         // 4 * 375 GAS
+                if (DEBUG_MODE) {
+                    MultiCallReturn(sig, 0x0, callSuccess);                         // 4 * 375 GAS
+                }
+
+                payBounty();                                                        // PAYBOUNTY_GAS
+                return;
+            } else {
+                // multiCall threw an exception (OOG, stack, etc)
+                revert();
             }
-
-            payBounty();                                                        // PAYBOUNTY_GAS
-            return;
-        }
-
-        /*
-         * The actual size of the return value
-         */
-        uint256 retSize;
-
-        // read the return size
-        assembly {
-            retSize := mload(retValMem)
         }
 
         if (DEBUG_MODE) {
             MultiCallReturn(sig, retSize, callSuccess);
         }
 
+        uint256 retMem = _getReturnData();
+
         /*
          * If the heads agree that the call should throw, `multiCall`
          * returns -1
          */
-        if ( retSize == uint(~0) ) {
-            revert();
+        if ( _mload(retMem) == bytes32(~0) ) {
+            _revert(retMem + 32, retSize - 32);
         }
 
         /*
          * Reset all temporary storage used to get a gas reimbursement.
          * No need to reset `discrepancy` as `multiCall` throws when it is set
          */
-        uint256 numCallbacks;
-
-        // read the number of callbacks made
-        assembly {
-            numCallbacks := mload(add(retValMem, sub(outputSize, 0x20)))
-        }
-
-        for (i=0; i<numCallbacks; i++) {
+        for (i=0; i<nextCall; i++) {
             delete calls[i].hash;
             if (calls[i].returnValue.length > 0) {
                 delete calls[i].returnValue;
             }
         }
 
-        if (numCallbacks != 0) {
-            nextCall = 0;
-        }
+        nextCall = 0;
 
         // return the actual output
-        assembly {
-            return(add(retValMem, 0x20), retSize)
+        if (retSize > 32) {
+            _return(retMem + 32, retSize - 32);
+        } else {
+            return;
         }
     }
 
@@ -323,36 +354,17 @@ contract HydraContract {
         // explicitly from the fallback function.
         assert(msg.sender == address(this));
 
-        // compute the amount of gas we can give the heads
-        uint256 gasForHeads = totalGasForHeads(msg.data.length - 0x4);
-
         // the hash of the output from the currently evaluated head.
         bytes32 retHash;
 
         // the hash of the output produced by the first head.
         bytes32 firstHeadRetHash;
 
-        // the maximal allowed size of the head's output. The structure of the
-        // returned value is [retSize retVal] where retSize is a word
-        // specifying the actual size in bytes of the return value and retVal
-        // is a sequence of retSize bytes (with retSize < MAX_RETURN_BYTES).
-        // If the head wants to throw, it sets retSize = -1
-        uint256 outputSize = 0x20 + MAX_RETURN_BYTES;
-
-        // allocate memory to store the return value
-        uint256 retValMem;
-        assembly {
-            retValMem := mload(0x40)            // free memory pointer
-            mstore(0x40,
-                   add(retValMem,               // add an extra word to store
-                       add(outputSize, 0x20)))  // the number of callbacks
-
-        }
-
         // the success flag for the call to the head
         bool callSuccess;
 
-        // the size of the head's output
+        // memory location and size for the heads' return value
+        uint256 retMem;
         uint256 retSize;
 
         /*
@@ -360,30 +372,15 @@ contract HydraContract {
          * The arguments received from the fallback function are:
          * [multiCallSig(0x4) restOfArgs(calldatasize - 0x4)]
          */
-        uint256 argsMem;
-        assembly {
-            argsMem := mload(0x40)                 // free memory pointer
-
-            calldatacopy(argsMem,                  // copy the args             // 3 * (calldatasize - 0x4) GAS
-                         0x4,
-                         sub(calldatasize, 0x4))
-            mstore(0x40,                            // update the memory pointer
-                   add(argsMem,
-                       sub(calldatasize, 0x4)))
-        }
-
+        uint256 mem = _malloc(msg.data.length - 4);
+        _mstore(mem, bytes32(MULTI_CALL_SIG));
+        _calldatacopy(mem, 4, msg.data.length - 4);
 
         // keep track of number of calls made by first head
         uint256 numCallsFirstHead = 0;
 
-        // keep track of the gas used by the heads
-        uint256 gasPreCall;
-        uint256 gasUsedByHead;
-
         // execute all heads one after the other
         for (uint i = 0; i < heads.length; ++i) {                               // 200 GAS
-
-            gasPreCall = msg.gas;
 
             // reset the storage value used to keep track of the next
             // `CallData` value to use to handle a callback
@@ -391,53 +388,27 @@ contract HydraContract {
                 nextCall = 0;                                                   // 5000 GAS
             }
 
-            callSuccess = callHead(i,
-                                   gasForHeads,
-                                   argsMem,
-                                   msg.data.length - 0x4,
-                                   retValMem,
-                                   outputSize);
-
-            // compute the amount of gas we spent on this call
-            gasUsedByHead = gasPreCall - msg.gas;
+            callSuccess = _call(msg.gas, heads[i], 0, mem, msg.data.length - 4);
 
             // if the CALL didn't succeed (probably OOG),
-            // return -1 so the default function will throw
+            // throw so the default function will throw
             if ( !callSuccess ) {
-
-                if (DEBUG_MODE) {
-                    HeadReturn(0, callSuccess);                                 // 3 * 375 GAS
-                }
-
-                assembly {
-                    mstore(retValMem, not(0))
-                    return(retValMem, 0x20)
-                }
-            }
-
-            // update the amount of gas available for the remaining heads
-            gasForHeads -= gasUsedByHead;
-
-            // get the size of the return value in bytes
-            assembly {
-                retSize := mload(retValMem)
-            }
-
-            if ( retSize == uint(~0) ) {
-                // head signals a throw by returning -1
-                retHash = bytes32(retSize);
-            } else if ( retSize > MAX_RETURN_BYTES) {
-                // this shouldn't happen, bad instrumentation!
                 revert();
-            } else {
-                // compute H(retVal, retMem[0:retVal])
-                assembly {
-                    retHash := sha3(add(retValMem, 0x20), retSize)              // MAX_RETURN_BYTES/8 * 6 GAS
-                }
             }
+
+            retMem = _getReturnData();
+            retSize = _returndatasize();
 
             if (DEBUG_MODE) {
                 HeadReturn(retSize, callSuccess);                               // 3 * 375 GAS
+            }
+
+            if ( _mload(retMem) == bytes32(~0) ) {
+                // head signals a throw by returning -1
+                retHash = bytes32(retSize);
+            } else {
+                // compute H(retMem)
+                retHash = _keccak256(retMem, retSize);
             }
 
             // first head
@@ -452,55 +423,25 @@ contract HydraContract {
                 if ( retHash != firstHeadRetHash ) {
                     // discrepancy between heads' outputs or throw behavior
                     // wrapper will pay bounty
-                    revert();
+                    _revertVal(uint(~0));
                 }
 
-                if ( retSize != uint(~0) &&
+                if ( _mload(retMem) != bytes32(~0) &&
                     (discrepancy || nextCall != numCallsFirstHead) ) {          // 400 GAS
                     // some discrepancy in the type or number of callbacks
                     // wrapper will pay bounty
-                    throw;
+                    _revertVal(uint(~0));
                 }
             }
         }
 
-        assembly {
-            // store the number of callbacks made so we can erase the data
-            mstore(add(retValMem, outputSize), numCallsFirstHead)
-
-            // retValMem=[retSize(0x20) output(MAX_OUTPUT_BYTES) numCalls(0x20)]
-            return(retValMem, add(outputSize, 0x20))                            // 3 * (MAX_RETURN_BYTES + 0x40)
-        }
-    }
-
-    function callHead(uint256 i,
-                      uint256 gasForHeads,
-                      uint256 argsMem,
-                      uint256 argsLen,
-                      uint256 retValMem,
-                      uint256 outputSize) private returns (bool callSuccess) {
-
-        address dest = heads[i];                                                // 200 GAS
-
-        assembly {
-            callSuccess := call(                                                // 700 GAS
-                gasForHeads,        // keep enough gas to avoid OOG
-                dest,               // destination address
-                0,                  // value
-                argsMem,            // inputs start here
-                argsLen,            // input length
-                retValMem,          // outputs will be written here
-                outputSize          // size of outputs
-            )
-        }
-
-        return callSuccess;
+        _return(retMem, retSize);
     }
 
     /*
      * Current value of the reentrancy mutex
      */
-    function getMutex() external returns(bool mutex) {
+    function getMutex() external view returns(bool mutex) {
         return nextCall != 0;
     }
 
@@ -518,9 +459,8 @@ contract HydraContract {
         uint256 rest = this.balance - bounty;
 
         bountyClaimed = true;                                                   // 20000 GAS
-        msg.sender.send(bounty);                                                //  9700 GAS
-        creator.send(rest);                                                     //  9700 GAS
-
+        msg.sender.transfer(bounty);                                            //  9700 GAS
+        creator.transfer(rest);                                                     //  9700 GAS
     }
 
     /*
@@ -559,14 +499,9 @@ contract HydraContract {
         assert(!discrepancy);
 
         /*
-         * Get the type of call (first word of call data) and the length of
-         * the call arguments.
+         * Get the type of call (last byte of call data)
          */
-        uint256 callbackType;
-
-        assembly {
-            callbackType := calldataload(sub(calldatasize, 0x20))
-        }
+        uint256 callbackType = uint256(msg.data[msg.data.length - 1]);
 
         if (DEBUG_MODE) {
             InCallBack(msg.data.length, callbackType, msg.sender);
@@ -577,34 +512,23 @@ contract HydraContract {
          * For a CALL instruction, ignore the gas amount as different heads may
          * specify different amounts.
          */
-        bytes32 hash;
 
-        assembly {
-            let x := mload(0x40)                    // get free memory
+        uint256 mem = _malloc(msg.data.length);
+        _calldatacopy(mem, 0, msg.data.length);
 
-            switch callbackType
-            // cannot use constants in inline assembly so hardcode CALL_CALLBACK
-            case 5 {
-                let l := sub(calldatasize, 0xa0)    // length of sig + args
-                calldatacopy(x, 0x0, l)             // copy sig and args
-                calldatacopy(add(x, l),             
-                             add(l, 0x20),          // skip gas value
-                             0x80)                  // addr + value +
-                                                    // outputSize + callType
-                hash := sha3(x, sub(calldatasize, 0x20))    
-            }
-            default {
-                calldatacopy(x, 0x0, calldatasize)  // hash all the arguments
-                hash := sha3(x, calldatasize)
-            }
+        // overwrite gas amount with 0
+        if (callbackType == CALLBACK_TYPE_CALL) {
+            _mstore(mem + msg.data.length - 5*32, 0);
         }
+
+        // hash of callback data
+        bytes32 hash = _keccak256(mem, msg.data.length);
 
         /*
          * If first head, set up a new storage space for this callback and
          * execute it.
          * If not first head, verify that signatures match and return output
          */
-
         if ( msg.sender != heads[0] ) {
 
             // find the call made by the first head
@@ -639,7 +563,7 @@ contract HydraContract {
 
             assembly {
                 // skip array length slot
-                return(add(retVal, 0x20), retLen)
+                return(add(retVal, 32), retLen)
             }
 
         } else {
@@ -669,28 +593,28 @@ contract HydraContract {
 
     /*
      * Handle a callback from the first head to log an event
+     *
+     * LOGi        : input     [memArgs, topics (i*32), 0-4 (32)]
+     *               output    None
      */
     function logCallback(uint256 numTopics, bytes32 hash) private {
 
-        uint256 memLen;
+        // length of the data to log
+        uint256 memLen = msg.data.length - 32 * (numTopics + 1);
+
+        uint256 mem = _malloc(memLen);
+        _calldatacopy(mem, 0, memLen);
 
         assembly {
-            // length of the data to log
-            memLen := sub(sub(calldatasize, 0x20), mul(numTopics, 0x20))
-
-            let x := mload(0x40)            // pointer to free memory
-            calldatacopy(x, 0x0, memLen)    // copy log data to memory
-            mstore(0x40, add(x, memLen))    // increment free memory pointer
-
             switch numTopics
-            case 0 { log0(x, memLen) }
-            case 1 { log1(x, memLen, calldataload(memLen)) }
-            case 2 { log2(x, memLen, calldataload(memLen),
+            case 0 { log0(mem, memLen) }
+            case 1 { log1(mem, memLen, calldataload(memLen)) }
+            case 2 { log2(mem, memLen, calldataload(memLen),
                                       calldataload(add(memLen, 0x20))) }
-            case 3 { log3(x, memLen, calldataload(memLen),
+            case 3 { log3(mem, memLen, calldataload(memLen),
                                       calldataload(add(memLen, 0x20)),
                                       calldataload(add(memLen, 0x40))) }
-            case 4 { log4(x, memLen, calldataload(memLen),
+            case 4 { log4(mem, memLen, calldataload(memLen),
                                       calldataload(add(memLen, 0x20)),
                                       calldataload(add(memLen, 0x40)),
                                       calldataload(add(memLen, 0x60))) }
@@ -709,30 +633,22 @@ contract HydraContract {
 
     /*
      * Handle a callback from the first head for a CALL instruction
+     *
+     *   CALL        : input     [sig(4), args (...), gas(32), address(32),
+     *                            value(32), outputSize(32), 5]
+     *                 output    [outputSizeBytes(32), success value(32)]
      */
     function externalCallCallback(bytes32 hash) private {
 
-        bytes4 sig;
-        address destAddr;
-        uint256 gasVal;
-        uint256 weiVal;
-        uint256 outputSize;
-        uint256 argsLen;
+        uint256 mem = _malloc(msg.data.length - 32);
+        _calldatacopy(mem, 0, msg.data.length - 32);
 
-        // get all the call data
-        assembly {
-            sig := calldataload(0x0)
-            outputSize := calldataload(sub(calldatasize, 0x40))
-            weiVal := calldataload(sub(calldatasize, 0x60))
-            destAddr := calldataload(sub(calldatasize, 0x80))
-            gasVal := calldataload(sub(calldatasize, 0xa0))
-            argsLen := sub(calldatasize, 0xa0)
-        }
-
-        // disregard the signature
-        if (argsLen > 0) {
-            argsLen -= 0x4;
-        }
+        bytes4 sig = bytes4(_mload(mem));
+        uint256 outputSize = uint256(_mload(mem + msg.data.length - 2 * 32));
+        uint256 weiVal = uint256(_mload(mem + msg.data.length - 3 * 32));
+        address destAddr = address(_mload(mem + msg.data.length - 4 * 32));
+        uint256 gasVal = uint256(_mload(mem + msg.data.length - 5 * 32));
+        uint256 argsLen = msg.data.length - 5 * 32;
 
         if (DEBUG_MODE) {
             ExternalCallBack(sig, gasVal, weiVal, destAddr, outputSize, argsLen);
@@ -740,60 +656,37 @@ contract HydraContract {
 
         calls[nextCall - 1].hash = hash;
 
+        bool callSuccess = _call(gasVal, destAddr, weiVal, mem, argsLen);
+
         // allocate space for the return value and return status (32 bytes)
-        bytes memory retValMem = new bytes(outputSize + 0x20);
-
-        bool callSuccess;
-
-        assembly {
-            let x := mload(0x40)                // free memory pointer
-            mstore(x, sig)                      // copy signature
-            calldatacopy(add(x, 0x4),           // copy arguments into memory
-                         0x4, argsLen)
-
-            mstore(0x40,                         // reset free memory
-                   add(argsLen, 0x4))
-
-            callSuccess := call(
-                gasVal,                 // give the specified amount of gas
-                destAddr,               // destination address
-                weiVal,                 // specified value
-                x,                      // inputs start here
-                add(argsLen, 0x4),      // input length (args + signature)
-                add(retValMem, 0x20),   // outputs will be written here
-                                        // (skip dynamic array length)
-                outputSize              // size of outputs
-            )
-            mstore(add(add(retValMem, 0x20),
-                   outputSize), callSuccess)  // save the call status
-
-        }
+        bytes memory retValMem = new bytes(_returndatasize() + 32);
+        bytes32 callSuccessBytes = callSuccess ? bytes32(1) : bytes32(0);
+        _returndatacopy(_arrayMemPos(retValMem) + 32, 0, _returndatasize());
+        _mstore(_arrayMemPos(retValMem) + 32 + _returndatasize(), callSuccessBytes);
 
         // if the call didn't succeed use the remaining gas to return the
         // failure status to the head
         if ( callSuccess ) {
-            calls[nextCall - 1].returnValue = new bytes(outputSize + 0x20);
+            calls[nextCall - 1].returnValue = new bytes(_returndatasize() + 32);
             calls[nextCall - 1].returnValue = retValMem;
         }
 
-        assembly {
-            // skip the array length slot
-            return(add(retValMem, 0x20), add(outputSize, 0x20))
-        }
+        _return(_arrayMemPos(retValMem) + 32, _returndatasize() + 32);
     }
 
     /*
      * Handle a callback from the first head for a BALANCE instruction
+     *
+     *   BALANCE     : input     [address (32), 6]
+     *                 output    [balance (32)]
      */
     function balanceCallback(bytes32 hash) private {
 
-        address addr;
-        uint256 bal;
+        uint256 mem = _malloc(32);
+        _calldatacopy(mem, 0, 32);
 
-        assembly {
-            addr := calldataload(0x0)   // get address
-            bal := balance(addr)        // get balance
-        }
+        address addr = address(_mload(mem));
+        uint256 bal = addr.balance;
 
         if (DEBUG_MODE) {
             BalanceCallBack(addr, bal);
@@ -802,54 +695,11 @@ contract HydraContract {
         calls[nextCall - 1].hash = hash;
 
         bytes memory balMem = new bytes(32);
-
-        assembly {
-            mstore(add(balMem, 0x20), bal)
-        }
+        _mstore(_arrayMemPos(balMem) + 32, bytes32(bal));
 
         calls[nextCall - 1].returnValue = new bytes(32);
         calls[nextCall - 1].returnValue = balMem;
 
-        assembly {
-            let x := mload(0x40)        // get free memory
-            mstore(x, bal)              // store balance
-            return(x, 0x20)             // return balance
-        }
-    }
-
-    /*
-     * Estimate of gas cost in `multiCall`
-     */
-    function multiCallGasCost(uint256 callDataSize) private returns(uint256 totalGas) {
-        uint256 numHeads = heads.length;
-
-        uint256 preLoopCost = (callDataSize * 3);
-        uint256 firstHeadCost = MULTI_CALL_LOOP_GAS + 200 + 5000;
-        uint256 otherHeadCost = MULTI_CALL_LOOP_GAS + 400;
-        uint256 postLoopCost = (MAX_RETURN_BYTES + 0x40) * 3;
-
-        uint256 tot = preLoopCost + firstHeadCost + (numHeads - 1) * otherHeadCost + postLoopCost;
-        return tot;
-    }
-
-    /*
-     * Estimate of gas cost in default function
-     */
-    function totalGasCost(uint256 callDataSize) private returns(uint256 totalGas) {
-        uint256 preCost = 700 + (callDataSize * 3);
-        uint256 multiCallCost = multiCallGasCost(callDataSize + 0x4);
-        uint256 postCost = 0;
-
-        uint256 tot = (preCost + multiCallCost + postCost);
-
-        return tot + tot / 10;
-    }
-
-    function totalGasForHeads(uint256 callDataSize) public returns(uint256 gasAmount) {
-        uint256 minGasCost = multiCallGasCost(callDataSize);
-        uint256 totalGas = msg.gas;
-        uint256 gasForHeads = (totalGas - minGasCost - minGasCost / 10);
-
-        return gasForHeads;
+        _return(_arrayMemPos(balMem) + 32, 32);
     }
 }

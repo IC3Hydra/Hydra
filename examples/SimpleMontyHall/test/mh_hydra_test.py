@@ -19,11 +19,6 @@ def deploy_montyhall_mc(_tester, chain):
     mc_path = META_CONTRACT
     head_files = [
         PATH_TO_HEADS + 'MontyHall_florian.sol',
-        PATH_TO_HEADS + 'MontyHall_florian.sol',
-        PATH_TO_HEADS + 'MontyHall_florian.sol',
-        PATH_TO_HEADS + 'MontyHall_florian.sol',
-        #PATH_TO_HEADS + 'MontyHall_florian.sol',
-        #PATH_TO_HEADS + 'MontyHall_florian.sol',
         #PATH_TO_HEADS + 'MontyHall_florian.se',
         ]
 

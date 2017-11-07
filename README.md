@@ -77,22 +77,34 @@ Florian's test suite:
 
 `python3 -m examples.ERC20.test.erc20_tests_2`
 
-Run both Phil's and Florian's test suites against the hydra ERC20 contract:
+Run both Phil's and Florian's test suites against the Hydra ERC20 contract:
 
 `python3 -m examples.ERC20.test.erc20_hydra_test`
 
 - MontyHall:
-Run tests against each head individually (currently only tests Florian.sol):
+Run tests against each head individually:
 
-`python3 -m examples.MontyHall.test.test_head`
+`python3 -m examples.MontyHall.test.mh_head_test`
 
-Differential testing on the heads (Currently fails):
+Differential testing on the heads:
 
 `python3 -m examples.MontyHall.test.differential_test`
 
-Run tests against the hydra MontyHall contract:
+Run tests against the Hydra MontyHall contract:
 
-`TODO`
+`python3 -m examples.MontyHall.test.mh_hydra_test`
+
+- Simple ERC20 and MontyHall
+
+[Our paper](https://thehydra.io/paper.pdf) describes a simplified Hydra 
+framework without the automatic head instrumentation. Run tests against the 
+Hydra ERC20 contract:
+
+`python3 -m examples.SimpleERC20.test.erc20_hydra_test`
+
+Run tests against the Hydra MontyHall contract:
+
+`python3 -m examples.SimpleMontyHall.test.mh_hydra_test`
 
 # Acknowledgements
 

@@ -102,6 +102,7 @@ class HydraDeployment(metaclass=ABCMeta):
 
     def build_and_deploy(self, include_constructor=True, debug=True, **kwargs):
 
+        head_codes = []
         deployed_contracts = []
 
         # compute the addresses at which the Meta Contract and heads will be
@@ -111,21 +112,14 @@ class HydraDeployment(metaclass=ABCMeta):
         # get the signatures of all functions in the ABI
         abi_sigs, init_sig = self.extract_abi(include_constructor)
 
-        # hard-code the head addresses and valid signatures into the
-        # Meta Contract
+        # hard-code the head addresses and valid signatures into
+        # the Meta Contract
+        self.logger.debug("FORMATTING META-CONTRACT")
         meta_contract_code = self.format_meta_contract(all_addresses[1:],
                                                        abi_sigs, init_sig,
                                                        debug=debug)
 
-        # deploy the Meta Contract
-        self.logger.debug("DEPLOYING THE META-CONTRACT {}".format(self.path_to_metacontract))
-        mc_address, mc_abi = self.deploy_contract(
-            meta_contract_code,
-            extract_language(self.path_to_metacontract), **kwargs)
-        deployed_contracts.append((mc_address, mc_abi))
-        self.logger.debug("META-CONTRACT DEPLOYED AT 0x{}".format(mc_address.hex()))
-
-        # instrument and deploy all the heads
+        # instrument all the heads
         for head_file in self.paths_to_heads:
             with open(head_file) as fd:
                 head_code = fd.read()
@@ -133,14 +127,23 @@ class HydraDeployment(metaclass=ABCMeta):
             language = extract_language(head_file)
             if self.instrument:
                 self.logger.debug("INSTRUMENTING HEAD {}".format(head_file))
-                head_code = self.instrument_head(head_code, language, mc_address)
+                head_code = self.instrument_head(head_code, language, all_addresses[0])
                 language = "evm"
 
-            self.logger.debug("DEPLOYING HEAD {}".format(head_file))
-            head_address, head_abi = self.deploy_contract(head_code,
-                                                          language)
-            deployed_contracts.append((head_address, head_abi))
-            self.logger.debug("DEPLOYED HEAD at 0x{}".format(head_address.hex()))
+            head_codes.append((head_code, language))
+
+        self.logger.debug("DEPLOYING ALL CONTRACTS")
+
+        self.logger.debug("DEPLOYING THE META-CONTRACT {}".format(self.path_to_metacontract))
+        address, abi = self.deploy_contract(meta_contract_code, extract_language(self.path_to_metacontract), **kwargs)
+        self.logger.debug("DEPLOYED at 0x{}".format(address.hex()))
+        deployed_contracts.append((address, abi))
+
+        for i, (code, language) in enumerate(head_codes):
+            self.logger.debug("INSTRUMENTING HEAD {}".format(self.paths_to_heads[i]))
+            address, abi = self.deploy_contract(code, language)
+            self.logger.debug("DEPLOYED at 0x{}".format(address.hex()))
+            deployed_contracts.append((address, abi))
 
         # make sure we deployed all the contracts at the pre-computed addresses
         assert [addr for (addr, abi) in deployed_contracts] == all_addresses
