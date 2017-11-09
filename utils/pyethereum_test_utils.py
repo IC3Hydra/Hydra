@@ -17,6 +17,8 @@ def int_to_bytes(i):
     return int(i).to_bytes(32, byteorder='big')
 
 
+
+# Simple utility to silently drop messages to stdout
 @contextlib.contextmanager
 def nostdout():
     save_stdout = sys.stdout

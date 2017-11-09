@@ -126,7 +126,6 @@ if __name__ == '__main__':
         print('totalSupply: {}'.format(ret))
 
         tx_hash = mc_abi.transact({'from': d.creator_addr, 'to': mc_addr, 'value': 1}).deposit()
-        print(tx_hash)
         ret = d.run_transaction(tx_hash)
         print('Gas Used: {}'.format(ret['gasUsed']))
 

@@ -19,7 +19,7 @@ def deploy_montyhall_mc(_tester, chain):
     mc_path = META_CONTRACT
     head_files = [
         PATH_TO_HEADS + 'MontyHall_florian.sol',
-        #PATH_TO_HEADS + 'MontyHall_florian.se',
+        PATH_TO_HEADS + 'MontyHall_florian.se',
         ]
 
     pyeth_deploy = PyEthereumHydraDeployment(chain, _tester.k0, _tester.a0,
