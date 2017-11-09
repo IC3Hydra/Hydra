@@ -75,6 +75,7 @@ class RPCHydraDeployment(HydraDeployment):
         else:
             bytecode, abi = self.compile(code, language)
 
+        bytecode = bytecode.strip()
         print("DEPLOYING CONTRACT...")
 
         tx_hash = self.web3.eth.contract(bytecode=bytecode, abi=abi).deploy(
@@ -112,12 +113,11 @@ if __name__ == '__main__':
         creator_addr = "0x48286a59a30d239ae5e70855e8940386de6134f6"
 
     if args.f:
-        GETH_DATADIR = '/Users/floriantramer/Library/Ethereum/MyNode/'
-        creator_addr = "0x4e6e90a33f4b025cf6b3e5e5ed7c196d841d7fc7"
+        GETH_DATADIR = '../geth_testnet'
+        creator_addr = "0x7d1480f9E92A91387E88e6ACD1Ea82C4acF87C87"
 
     d = RPCHydraDeployment(creator_addr, "hydra/metacontract/Hydra.sol", heads, GETH_DATADIR)
-    contracts = d.build_and_deploy(include_constructor=False, debug=False)
-
+    contracts = d.build_and_deploy(include_constructor=False, debug=True)
     mc_abi = d.abi_object(heads[-1])
     mc_addr = '0x' + utils.encode_hex(contracts[0][0])
 
@@ -126,6 +126,7 @@ if __name__ == '__main__':
         print('totalSupply: {}'.format(ret))
 
         tx_hash = mc_abi.transact({'from': d.creator_addr, 'to': mc_addr, 'value': 1}).deposit()
+        print(tx_hash)
         ret = d.run_transaction(tx_hash)
         print('Gas Used: {}'.format(ret['gasUsed']))
 
