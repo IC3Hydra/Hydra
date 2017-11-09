@@ -109,8 +109,8 @@ if __name__ == '__main__':
         creator_addr = "0x48286a59a30d239ae5e70855e8940386de6134f6"
 
     if args.l:
-        GETH_DATADIR = '/Users/lorenz/geth-myrtle'
-        creator_addr = "0x48286a59a30d239ae5e70855e8940386de6134f6"
+        GETH_DATADIR = '/Users/lorenz/geth_testnet'
+        creator_addr = "0x7d1480f9E92A91387E88e6ACD1Ea82C4acF87C87"
 
     if args.f:
         GETH_DATADIR = '../geth_testnet'
