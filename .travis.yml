@@ -1,0 +1,12 @@
+sudo: required
+
+services:
+  - docker
+
+before_install:
+  - docker pull lorenzb/hydra
+
+script:
+  - echo "${TRAVIS_REPO_SLUG}"
+  - echo "${TRAVIS_COMMIT}"
+  - docker run lorenzb/hydra bash -c "git clone 'https://github.com/${TRAVIS_REPO_SLUG}' hydra && cd hydra && git checkout ${TRAVIS_COMMIT} && git clean -f -d && python3.6 -m pip install -r requirements.txt && python3.6 run_all_tests.py"
