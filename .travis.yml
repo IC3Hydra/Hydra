@@ -7,6 +7,6 @@ before_install:
   - docker pull lorenzb/hydra
 
 script:
-  - echo "${TRAVIS_REPO_SLUG}"
-  - echo "${TRAVIS_COMMIT}"
-  - docker run lorenzb/hydra bash -c "git clone 'https://github.com/${TRAVIS_REPO_SLUG}' hydra && cd hydra && git checkout ${TRAVIS_COMMIT} && git clean -f -d && python3.6 -m pip install -r requirements.txt && python3.6 run_all_tests.py"
+  - ls
+  - pwd
+  - docker run -v $PWD:/repo lorenzb/hydra bash -c "cp -r /repo /repo2  && cd /repo2/ && python3.6 -m pip install -r requirements.txt && python3.6 run_all_tests.py"
