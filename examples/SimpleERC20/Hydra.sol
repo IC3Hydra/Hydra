@@ -110,7 +110,7 @@ contract SimpleERC20 is ASMUtils {
      * CONSTRUCTOR
      * Takes as argument the bounty value in WEI
      */
-    function HydraContract() public payable {
+    function SimpleERC20() public payable {
         bountyValue = msg.value;
         creator = msg.sender;
     }
@@ -136,7 +136,12 @@ contract SimpleERC20 is ASMUtils {
         if (DEBUG_MODE) {
             InFallback(sig, msg.sender);
         }
-        
+
+        /*
+         * the message sender (msg.sender) and value (msg.value) will be added
+         * to the call arguments for each head. We update the call signature
+         * accordingly
+         */
         if ( sig == bytes4(keccak256("totalSupply()")) ) {
             newSig = bytes4(keccak256("totalSupply(address,uint256)"));
 
@@ -219,12 +224,18 @@ contract SimpleERC20 is ASMUtils {
             }
         }
 
-        // the output is of the form [CALL_SUCCESS, RET_VAL, ADDRESS(opt), VALUE(opt)]
+        /*
+         * The output is of the form [CALL_SUCCESS, RET_VAL, ADDRESS (optional), VALUE (optional)]
+         * If an ADDRESS and VALUE are returned, this indicates that the head
+         * wants to `send` VALUE to ADDRESS
+         */
+
         // if the head signals a throw, throw here
         if (_mload(retValMem) == 0x0) {
             revert();
         }
 
+        // execute the send that the heads agreed to
         if (_returndatasize() > 32 + outputSize) {
             address dest = address(_mload(retValMem + 32 + outputSize));
             uint256 val = uint256(_mload(retValMem + 32 + outputSize + 32));
@@ -252,7 +263,7 @@ contract SimpleERC20 is ASMUtils {
         uint256 rest = this.balance - bounty;
 
         bountyClaimed = true;
-        msg.sender.send(bounty);
-        creator.send(rest);
+        msg.sender.transfer(bounty);
+        creator.transfer(rest);
     }
 }

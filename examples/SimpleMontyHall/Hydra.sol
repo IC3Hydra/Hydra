@@ -115,7 +115,7 @@ contract SimpleMontyHall is ASMUtils {
      * CONSTRUCTOR
      * Takes as argument the bounty value in WEI
      */
-    function HydraContract() public payable {
+    function SimpleMontyHall() public payable {
         bountyValue = msg.value;
         creator = msg.sender;
     }
@@ -147,7 +147,12 @@ contract SimpleMontyHall is ASMUtils {
         if (DEBUG_MODE) {
             InFallback(sig, msg.sender);
         }
-        
+
+        /*
+         * the message sender (msg.sender) and value (msg.value) will be added
+         * to the call arguments for each head. We update the call signature
+         * accordingly
+         */
         if ( sig == bytes4(keccak256("InitMonty(int128,int128,bytes32)")) ) {
             newSig = bytes4(keccak256("InitMonty(address,uint256,int128,int128,bytes32)"));
             outputSize = 0x0;
@@ -239,10 +244,13 @@ contract SimpleMontyHall is ASMUtils {
         /* the output is of the form
          * [CALL_SUCCESS,
          *  RET_VAL,
-         *  ADDRESS1 (opt),
-         *  VALUE1 (opt),
-         *  ADDRESS2 (opt),
-         *  VALUE2 (opt)]
+         *  ADDRESS1 (optional),
+         *  VALUE1 (optional),
+         *  ADDRESS2 (optional),
+         *  VALUE2 (optional)]
+         *
+         * If a head returns one or more ADDRESS, VALUE tuples, this indicates
+         * that the head wants to `send` VALUE to ADDRESS
          */
 
         // if the head signals a throw, throw here
@@ -251,6 +259,7 @@ contract SimpleMontyHall is ASMUtils {
         }
 
         uint256 retValSize = _returndatasize();
+
 
         address dest;
         uint256 val;
