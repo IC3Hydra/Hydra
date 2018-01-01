@@ -5,12 +5,27 @@ from ethereum.tools import tester
 from ethereum import utils
 
 import unittest
+import contextlib
+import sys
+
 
 def bytes_to_int(bytez):
     return int(utils.encode_hex(bytez), 16)
 
+
 def int_to_bytes(i):
     return int(i).to_bytes(32, byteorder='big')
+
+
+
+# Simple utility to silently drop messages to stdout
+@contextlib.contextmanager
+def nostdout():
+    save_stdout = sys.stdout
+    sys.stdout = None
+    yield
+    sys.stdout = save_stdout
+
 
 class PyEthereumTestCase(unittest.TestCase):
 
@@ -36,7 +51,10 @@ class PyEthereumTestCase(unittest.TestCase):
 
     def setUp(self):
         self.longMessage = True
-        self.s.revert(self.initial_state)
+
+        with nostdout():
+            self.s.revert(self.initial_state)
+
         self.gas_used_before = self.s.head_state.gas_used
         self.refunds_before = self.s.head_state.refunds
 
@@ -75,7 +93,23 @@ class PyEthereumTestCase(unittest.TestCase):
         (to prevent gas exhaustion) """
         initial_state = self.s.snapshot()
         self.assertRaises(exception, function_to_test)
-        self.s.revert(initial_state)
+
+        with nostdout():
+            self.s.revert(initial_state)
+
+    def assert_raises_msg(self, func, err_msg, test_fail_msg):
+        initial_state = self.s.snapshot()
+
+        with self.assertRaises(Exception) as context:
+            func()
+
+        self.assertTrue(str(err_msg) in str(context.exception),
+                        "expected {}, got {}, ".
+                        format(str(err_msg),
+                               str(context.exception)) + test_fail_msg)
+
+        with nostdout():
+            self.s.revert(initial_state)
 
 
 class PyEthereumHydraDeployment(HydraDeployment):

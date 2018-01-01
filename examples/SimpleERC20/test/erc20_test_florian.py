@@ -1,7 +1,7 @@
 from utils.pyethereum_test_utils import PyEthereumTestCase
 
-#from ethereum.slogging import configure_logging
-#config_string = ':trace'
+from ethereum.slogging import configure_logging
+config_string = ':trace'
 #configure_logging(config_string=config_string)
 
 

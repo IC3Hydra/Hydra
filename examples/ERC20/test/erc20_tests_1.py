@@ -51,7 +51,6 @@ class TestERC20(PyEthereumTestCase):
             lambda x: cls.hydra_events.append(cls.c.translator.listen(x)))
 
     def setUp(self):
-        self.s.revert(self.initial_state)
         super().setUp()
 
     def test_initial_state(self):

@@ -45,20 +45,21 @@ class RPCHydraDeployment(HydraDeployment):
         abi = get_abi('/tmp/1', language)
         if language == "solidity":
             raw_output = check_output(['solc', '--combined-json', 'abi,bin', '/tmp/1'],
-                input=code.encode('utf-8'))
+                                      input=code.encode('utf-8'))
             output = json.loads(raw_output)
-            assert len(output['contracts']) == 1
-
+            contracts = [c['bin'] for c in output['contracts'].values() if c['abi'] != '[]']
+            assert len(contracts) == 1
             print("COMPILED {}...".format(language))
-            return list(output['contracts'].values())[0]['bin'], abi
+
+            return contracts[0], abi
         elif language == 'viper':
             print("COMPILED {}...".format(language))
             return check_output(['viper', '/tmp/1'],
-                        input=code.encode('utf-8')), abi
+                                input=code.encode('utf-8')), abi
         elif language == 'serpent':
             print("COMPILED {}...".format(language))
             return check_output(['serpent', 'compile', '/tmp/1'],
-                        input=code.encode('utf-8')), abi
+                                input=code.encode('utf-8')), abi
         else:
             raise ValueError("inappropriate language argument")
 
@@ -74,6 +75,7 @@ class RPCHydraDeployment(HydraDeployment):
         else:
             bytecode, abi = self.compile(code, language)
 
+        bytecode = bytecode.strip()
         print("DEPLOYING CONTRACT...")
 
         tx_hash = self.web3.eth.contract(bytecode=bytecode, abi=abi).deploy(
@@ -106,19 +108,17 @@ if __name__ == '__main__':
         GETH_DATADIR = '/home/debian/geth_mainnet'
         creator_addr = "0x48286a59a30d239ae5e70855e8940386de6134f6"
 
-
     if args.l:
-        GETH_DATADIR = '/Users/lorenz/geth-myrtle'
-        creator_addr = "0x48286a59a30d239ae5e70855e8940386de6134f6"
+        GETH_DATADIR = '/Users/lorenz/geth_testnet'
+        creator_addr = "0x7d1480f9E92A91387E88e6ACD1Ea82C4acF87C87"
 
     if args.f:
-        GETH_DATADIR = '/Users/floriantramer/Library/Ethereum/MyNode/'
-        creator_addr = "0x48286a59a30d239ae5e70855e8940386de6134f6"
+        GETH_DATADIR = '../geth_testnet'
+        creator_addr = "0x7d1480f9E92A91387E88e6ACD1Ea82C4acF87C87"
 
     d = RPCHydraDeployment(creator_addr, "hydra/metacontract/Hydra.sol", heads, GETH_DATADIR)
-    contracts = d.build_and_deploy(include_constructor=False, debug=False)
-
-    mc_abi = d.abi_object(heads[1])
+    contracts = d.build_and_deploy(include_constructor=False, debug=True)
+    mc_abi = d.abi_object(heads[-1])
     mc_addr = '0x' + utils.encode_hex(contracts[0][0])
 
     if args.test:

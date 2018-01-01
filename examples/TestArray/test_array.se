@@ -1,8 +1,0 @@
-
-def test():
-    ret = array(3)
-    ret[0] = 1
-    ret[1] = msg.sender
-    ret[2] = 1000
-
-    RETURN(ret, 0x60)

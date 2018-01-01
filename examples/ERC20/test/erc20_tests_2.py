@@ -91,6 +91,7 @@ class TestERC20Flo(PyEthereumTestCase):
 
         # If failed, withdraw more than balance allowed
         self.assert_tx_failed(lambda: self.c.withdraw(601, sender=self.t.k0))
+
         self.assertTrue(self.c.withdraw(500, sender=self.t.k0),
                         "Withdraw did not work")
 

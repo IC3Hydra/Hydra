@@ -99,21 +99,23 @@ def isBitSet(val:int128, idx:int128):
     return(((val & 2**(idx)) > 0):bool)
 
 def OpenDoors(_sender: address, _msg_value: uint256, opened_doors:int128, game_id:int128):
+    ret = array(2)
+
     if ( _msg_value != 0 ):
-       return(False:bool)
+        RETURN(ret, 0x40)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     
     n = self.Monty_struct[game_id].n
     k = self.Monty_struct[game_id].k
     
     if ( self.Monty_struct[game_id].lifecycle_step != 2 ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     if ( _sender != self.Monty_struct[game_id].house_acct ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     if ( self.hatch_triggered ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     
     # check that ``opened_doors'' specifies exactly k doors other than the guessed one
     count = 0
@@ -124,91 +126,95 @@ def OpenDoors(_sender: address, _msg_value: uint256, opened_doors:int128, game_i
         i -= 1
         
     if ( count != k ):
-        return(False:bool)
+        RETURN(ret, 0x40)
 
     if ( self.isBitSet(opened_doors, self.Monty_struct[game_id].round1_door_guess) ):
-        return(False:bool)
+        RETURN(ret, 0x40)
 
     self.Monty_struct[game_id].opened_doors = opened_doors
 
     self.Monty_struct[game_id].lifecycle_step = 3
     self.Monty_struct[game_id].last_action = block.number
 
-    ret = array(2)
     ret[0] = True
     ret[1] = True
     RETURN(ret, 0x40)
 
 def const isOpened(_sender: address, _msg_value: uint256, door_num:int128, game_id:int128):
+    ret = array(2)
+
     if ( game_id < 0 || game_id >= self.next_game_id ):
-        return(False:bool)
+        RETURN(ret, 0x40)
 
     n =  self.Monty_struct[game_id].n
 
     if ( door_num < 0 || door_num >= n ):
-        return(False:bool)
+        RETURN(ret, 0x40)
 
     if ( self.Monty_struct[game_id].lifecycle_step < 3 || self.Monty_struct[game_id].lifecycle_step > 5 ):
-        return(False:bool)
+        RETURN(ret, 0x40)
 
-    ret = array(2)
     ret[0] = True
     ret[1] = self.isBitSet(self.Monty_struct[game_id].opened_doors, door_num)
     RETURN(ret, 0x40)
 
 def PlayMontyRound2(_sender: address, _msg_value: uint256, round2_door_guess:int128, game_id:int128):
+    ret = array(2)
+
     if ( _msg_value != 0 ):
-        return(False:bool)
+        RETURN(ret, 0x40)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     
     n =  self.Monty_struct[game_id].n
     
     if ( round2_door_guess < 0 || round2_door_guess >= n ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     if ( self.Monty_struct[game_id].lifecycle_step != 3 ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     
     if ( _sender != self.Monty_struct[game_id].contestant_acct ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     if ( self.hatch_triggered ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     
     if ( self.isBitSet(self.Monty_struct[game_id].opened_doors, round2_door_guess) ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     
     self.Monty_struct[game_id].round2_door_guess = round2_door_guess
     self.Monty_struct[game_id].lifecycle_step = 4
     self.Monty_struct[game_id].last_action = block.number
-    ret = array(2)
+
     ret[0] = True
     ret[1] = True
     RETURN(ret, 0x40)
 
 def EndGame(_sender: address, _msg_value: uint256, winning_door:int128, witness:bytes32, game_id:int128):
+    ret = array(6)
+
     if ( _msg_value != 0 ):
-        return(False:bool)
+        RETURN(ret, 0xc0)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
-        return(False:bool)
+        RETURN(ret, 0xc0)
     
     n = self.Monty_struct[game_id].n
     
     if ( _sender != self.Monty_struct[game_id].house_acct ):
-        return(False:bool)
+        RETURN(ret, 0xc0)
     if ( winning_door < 0 || winning_door >= n ):
-        return(False:bool)
+        RETURN(ret, 0xc0)
     if ( self.Monty_struct[game_id].lifecycle_step != 4 ):
-        return(False:bool)
+        RETURN(ret, 0xc0)
     if ( self.hatch_triggered ):
-        return(False:bool)
+        RETURN(ret, 0xc0)
     
     if ( self.isBitSet(self.Monty_struct[game_id].opened_doors, winning_door) ):
-        return(False:bool)
+        RETURN(ret, 0xc0)
     
     if ( self.commit(winning_door, witness) != self.Monty_struct[game_id].winning_door_commit ):
-        return(False:bool)
+        RETURN(ret, 0xc0)
 
     bet = self.Monty_struct[game_id].bet
     reward = self.Monty_struct[game_id].reward
@@ -240,18 +246,20 @@ def EndGame(_sender: address, _msg_value: uint256, winning_door:int128, witness:
     RETURN(ret, 0xc0)
 
 def Payout(_sender: address, _msg_value: uint256, house:bool, game_id:int128):
+    ret = array(4)
+
     if ( _msg_value != 0 ):
-        return(False:bool)
+        RETURN(ret, 0x80)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     
     if ( self.Monty_struct[game_id].lifecycle_step != 5 ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     if ( self.hatch_triggered ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     if ( self.Monty_struct[game_id].winner != 1 && self.Monty_struct[game_id].winner != 2 ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     
     bet = self.Monty_struct[game_id].bet
     reward = self.Monty_struct[game_id].reward
@@ -263,7 +271,7 @@ def Payout(_sender: address, _msg_value: uint256, house:bool, game_id:int128):
         self.Monty_struct[game_id].bet = 0
         self.Monty_struct[game_id].reward = 0
         self.Monty_struct[game_id].deposit = 0
-        ret = array(4)
+
         ret[0] = 1
         ret[1] = 1
         ret[2] = self.Monty_struct[game_id].house_acct
@@ -275,7 +283,6 @@ def Payout(_sender: address, _msg_value: uint256, house:bool, game_id:int128):
 
         self.Monty_struct[game_id].deposit = 0
 
-        ret = array(4)
         ret[0] = 1
         ret[1] = 1
         ret[2] = self.Monty_struct[game_id].house_acct
@@ -288,14 +295,12 @@ def Payout(_sender: address, _msg_value: uint256, house:bool, game_id:int128):
         self.Monty_struct[game_id].bet = 0
         self.Monty_struct[game_id].reward = 0
 
-        ret = array(4)
         ret[0] = 1
         ret[1] = 1
         ret[2] = self.Monty_struct[game_id].contestant_acct
         ret[3] = bet + reward
         RETURN(ret, 0x80)
 
-    ret = array(4)
     ret[0] = 1
     ret[1] = 1
     ret[2] = self.Monty_struct[game_id].contestant_acct
@@ -304,35 +309,39 @@ def Payout(_sender: address, _msg_value: uint256, house:bool, game_id:int128):
 
     
 def EscapeHatch(_sender: address, _msg_value: uint256):
+    ret = array(2)
+
     if ( _msg_value != 0 ):
-        return(False:bool)
+        RETURN(ret, 0x40)
 
     if ( _sender != self.creator ):
-        return(False:bool)
+        RETURN(ret, 0x40)
     
     self.hatch_triggered = True
-    ret = array(2)
+
     ret[0] = True
     ret[1] = True
     RETURN(ret, 0x40)
 
 def RefundInactive(_sender: address, _msg_value: uint256, game_id:int128):
+    ret = array(4)
+
     if ( _msg_value != 0 ):
-        return(False:bool)
+        RETURN(ret, 0x80)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     
     if ( self.hatch_triggered ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     if ( (block.number - self.Monty_struct[game_id].last_action) <= 14400 ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     if ( self.Monty_struct[game_id].lifecycle_step < 1 || self.Monty_struct[game_id].lifecycle_step > 4 ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     if ( self.Monty_struct[game_id].lifecycle_step % 2 == 1 && _sender != self.Monty_struct[game_id].house_acct ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     if ( self.Monty_struct[game_id].lifecycle_step % 2 == 0 && _sender != self.Monty_struct[game_id].contestant_acct ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     
     bet = self.Monty_struct[game_id].bet
     reward = self.Monty_struct[game_id].reward
@@ -343,7 +352,6 @@ def RefundInactive(_sender: address, _msg_value: uint256, game_id:int128):
     self.Monty_struct[game_id].deposit = 0
     self.Monty_struct[game_id].lifecycle_step = -1
 
-    ret = array(4)
     ret[0] = 1
     ret[1] = 1
     ret[2] = _sender
@@ -351,16 +359,18 @@ def RefundInactive(_sender: address, _msg_value: uint256, game_id:int128):
     RETURN(ret, 0x80)
 
 def RefundAfterEscapeHatch(_sender: address, _msg_value: uint256, game_id:int128):
+    ret = array(4)
+
     if ( _msg_value != 0 ):
-        return(False:bool)
+        RETURN(ret, 0x80)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     
     if ( !self.hatch_triggered ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     if ( _sender != self.Monty_struct[game_id].house_acct && _sender != self.Monty_struct[game_id].contestant_acct ):
-        return(False:bool)
+        RETURN(ret, 0x80)
     
     bet = self.Monty_struct[game_id].bet
     reward = self.Monty_struct[game_id].reward
@@ -370,7 +380,6 @@ def RefundAfterEscapeHatch(_sender: address, _msg_value: uint256, game_id:int128
 
         self.Monty_struct[game_id].reward = 0
         self.Monty_struct[game_id].deposit = 0
-        ret = array(4)
         ret[0] = 1
         ret[1] = 1
         ret[2] = _sender
@@ -380,14 +389,12 @@ def RefundAfterEscapeHatch(_sender: address, _msg_value: uint256, game_id:int128
     if ( _sender == self.Monty_struct[game_id].contestant_acct ):
 
         self.Monty_struct[game_id].bet = 0
-        ret = array(4)
         ret[0] = 1
         ret[1] = 1
         ret[2] = _sender
         ret[3] = bet
         RETURN(ret, 0x80)
 
-    ret = array(4)
     ret[0] = 1
     ret[1] = 1
     ret[2] = 0

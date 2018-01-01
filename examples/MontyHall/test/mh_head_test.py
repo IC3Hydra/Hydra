@@ -6,22 +6,9 @@ from os.path import basename
 import unittest
 import numpy as np
 from copy import copy
+import sys
 
 from utils.pyethereum_test_utils import PyEthereumTestCase
-
-
-def assert_raises_msg(test_case, func, err_msg, test_fail_msg):
-    initial_state = test_case.s.snapshot()
-
-    with test_case.assertRaises(Exception) as context:
-        func()
-
-    test_case.assertTrue(str(err_msg) in str(context.exception),
-                         "expected {}, got {}, ".
-                         format(str(err_msg), str(context.exception))
-                         + test_fail_msg)
-
-    test_case.s.revert(initial_state)
 
 
 class TestMonthyHallFlo(PyEthereumTestCase):
@@ -70,7 +57,6 @@ class TestMonthyHallFlo(PyEthereumTestCase):
                                            self._game_info["witness"])
 
         self.curr_stage = None
-        self.s.revert(self.initial_state)
 
     def get_n(self):
         return self._game_info["n"]
@@ -136,11 +122,10 @@ class TestMonthyHallFlo(PyEthereumTestCase):
 
     def assert_stage_failed(self, updates, expected_error, msg, value=0):
         game_info = dict(self._game_info, **updates)
-        assert_raises_msg(self,
-                          lambda: play_game(self.s, self.c, game_info,
-                                            value=value,
-                                            rounds=[self.curr_stage]),
-                          expected_error, msg)
+        self.assert_raises_msg(lambda: play_game(self.s, self.c, game_info,
+                                                 value=value,
+                                                 rounds=[self.curr_stage]),
+                               expected_error, msg)
 
     def assert_stage_succeeds(self, updates, msg, stage=None):
         if stage is None:
@@ -161,7 +146,7 @@ class TestMonthyHallFlo(PyEthereumTestCase):
             self.assertTrue(False, msg + " Got {}".format(e.args[0]))
 
     def assert_special_failed(self, game_id, expected_err, msg, **kwargs):
-        assert_raises_msg(self, lambda: special_func(
+        self.assert_raises_msg(lambda: special_func(
             self.c, game_id, self.curr_stage, **kwargs), expected_err, msg)
 
     def assert_special_succeeds(self, game_id, msg, stage=None, **kwargs):

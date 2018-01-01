@@ -1,8 +1,73 @@
 
+pragma solidity ^0.4.18;
 
-pragma solidity ^0.4.11;
+contract ASMUtils {
 
-contract SimpleERC20 {
+    function _malloc(uint256 size) internal pure returns (uint256 memStart) {
+        assembly {
+            memStart := mload(0x40)
+            mstore(0x40, add(memStart, size))
+        }
+    }
+
+    function _mstore(uint256 memPos, bytes32 word) internal pure {
+        assembly {
+            mstore(memPos, word)
+        }
+    }
+
+    function _mload(uint256 memPos) internal pure returns (bytes32 word) {
+        assembly {
+            word := mload(memPos)
+        }
+    }
+
+    function _return(uint256 memPos, uint256 len) internal pure {
+        assembly {
+            return(memPos, len)
+        }
+    }
+
+    function _calldatacopy(uint256 memPos, uint256 callDataPos, uint256 len) internal pure {
+        assembly {
+            calldatacopy(memPos, callDataPos, len)
+        }
+    }
+
+    function _call(uint256 gasAmount, address dest, uint256 val, uint256 argsMem, uint256 argsLen) internal returns (bool callSuccess) {
+        assembly {
+            callSuccess := call(gasAmount, dest, val, argsMem, argsLen, 0x0, 0x0)
+        }
+    }
+
+    function _returndatasize() internal pure returns (uint256 size) {
+        assembly {
+            size := returndatasize
+        }
+    }
+
+    function _returndatacopy(uint256 memPos, uint256 retDataPos, uint256 len) internal pure {
+        assembly {
+            returndatacopy(memPos, retDataPos, len)
+        }
+    }
+
+    function _keccak256(uint256 memPos, uint256 len) internal pure returns (bytes32 hash) {
+        assembly {
+            hash := keccak256(memPos, len)
+        }
+    }
+
+    function _getReturnData() internal pure returns (uint256 memPos) {
+        uint256 retSize = _returndatasize();
+
+        memPos = _malloc(retSize);
+        _returndatacopy(memPos, 0, retSize);
+        return memPos;
+    }
+}
+
+contract SimpleERC20 is ASMUtils {
 
     /* ------- begin events ------- */
     event InFallback(bytes4 sig, address sender);
@@ -38,12 +103,6 @@ contract SimpleERC20 {
     // set to `true` to have the meta contract log events
     bool constant DEBUG_MODE = true;
 
-    // used to count gas costs when DEBUG_MODE is on/off
-    uint constant DEBUG_MODE_MUL = DEBUG_MODE ? 1 : 0;
-
-    // maximum size of a head's output
-    uint256 constant MAX_HEAD_OUTPUT_SIZE = 0x80;
-
     /* ------- end constant vars ------- */
 
 
@@ -51,7 +110,7 @@ contract SimpleERC20 {
      * CONSTRUCTOR
      * Takes as argument the bounty value in WEI
      */
-    function HydraContract() payable {
+    function SimpleERC20() public payable {
         bountyValue = msg.value;
         creator = msg.sender;
     }
@@ -60,7 +119,7 @@ contract SimpleERC20 {
      * On an external call: dispatch the call to `multiCall`, specifying the
      *   message sender as the first argument.
      */
-    function() payable {
+    function() public payable {
 
         // get the signature of the called function
         bytes4 sig = msg.sig;
@@ -77,91 +136,62 @@ contract SimpleERC20 {
         if (DEBUG_MODE) {
             InFallback(sig, msg.sender);
         }
-        
-        if ( sig == bytes4(sha3("totalSupply()")) ) {
-            newSig = bytes4(sha3("totalSupply(address,uint256)"));
 
-        } else if ( sig == bytes4(sha3("balanceOf(address)")) ) {
-            newSig = bytes4(sha3("balanceOf(address,uint256,address)"));
+        /*
+         * the message sender (msg.sender) and value (msg.value) will be added
+         * to the call arguments for each head. We update the call signature
+         * accordingly
+         */
+        if ( sig == bytes4(keccak256("totalSupply()")) ) {
+            newSig = bytes4(keccak256("totalSupply(address,uint256)"));
 
-        } else if ( sig == bytes4(sha3("transfer(address,uint256)")) ) {
-            newSig = bytes4(sha3("transfer(address,uint256,address,uint256)"));
+        } else if ( sig == bytes4(keccak256("balanceOf(address)")) ) {
+            newSig = bytes4(keccak256("balanceOf(address,uint256,address)"));
 
-        } else if ( sig == bytes4(sha3("transferFrom(address,address,uint256)")) ) {
-            newSig = bytes4(sha3("transferFrom(address,uint256,address,address,uint256)"));
+        } else if ( sig == bytes4(keccak256("transfer(address,uint256)")) ) {
+            newSig = bytes4(keccak256("transfer(address,uint256,address,uint256)"));
 
-        } else if ( sig == bytes4(sha3("approve(address,uint256)")) ) {
-            newSig = bytes4(sha3("approve(address,uint256,address,uint256)"));
+        } else if ( sig == bytes4(keccak256("transferFrom(address,address,uint256)")) ) {
+            newSig = bytes4(keccak256("transferFrom(address,uint256,address,address,uint256)"));
 
-        } else if ( sig == bytes4(sha3("allowance(address,address)")) ) {
-            newSig = bytes4(sha3("allowance(address,uint256,address,address)"));
+        } else if ( sig == bytes4(keccak256("approve(address,uint256)")) ) {
+            newSig = bytes4(keccak256("approve(address,uint256,address,uint256)"));
 
-        } else if ( sig == bytes4(sha3("deposit()")) ) {
-            newSig = bytes4(sha3("deposit(address,uint256)"));
+        } else if ( sig == bytes4(keccak256("allowance(address,address)")) ) {
+            newSig = bytes4(keccak256("allowance(address,uint256,address,address)"));
+
+        } else if ( sig == bytes4(keccak256("deposit()")) ) {
+            newSig = bytes4(keccak256("deposit(address,uint256)"));
             // deposit has no output
             outputSize = 0x0;
 
-        } else if ( sig == bytes4(sha3("withdraw(uint256)")) ) {
-            newSig = bytes4(sha3("withdraw(address,uint256,uint256)"));
+        } else if ( sig == bytes4(keccak256("withdraw(uint256)")) ) {
+            newSig = bytes4(keccak256("withdraw(address,uint256,uint256)"));
 
         } else {
             revert();
         }
-        
-        // allocate memory to store the return value
-        uint256 retValMem;
-        uint256 maxOutputSize = MAX_HEAD_OUTPUT_SIZE;
-        assembly {
-            retValMem := mload(0x40)                    // free memory pointer
-            mstore(0x40, add(retValMem, maxOutputSize)) // allocate output size
-        }
 
-        uint256 x;
-        /* new call arguments are:
-         *  newSig       -> x[0x0..0x3]
-         *  msg.sender   -> x[0x4..0x23]
-         *  msg.value    -> x[0x24..0x43]
-         *  calldata[4:] -> x[0x44..]
-         *
-         * len(c) = 0x4 + 0x20 + 0x20 (calldatasize - 0x4)
-         *        = calldatasize + 0x40
-         */
-        assembly {
-            x := mload(0x40)                        // Get a free memory pointer
+        // add the sender and value to the call args
+        uint256 mem = _malloc(msg.data.length + 64);
+        _mstore(mem, bytes32(newSig));
+        _mstore(mem + 4, bytes32(msg.sender));
+        _mstore(mem + 4 + 32, bytes32(msg.value));
+        _calldatacopy(mem + 4 + 32 + 32, 4, msg.data.length - 4);
 
-            mstore(x, newSig)                       // the new call signature
-            mstore(add(x, 0x4), caller)             // the original sender
-            mstore(add(x, 0x24), callvalue)         // the call value
-
-            calldatacopy(add(x, 0x44), 0x4,         // Copy the call data       // calldatasize * 3 GAS
-                         sub(calldatasize, 0x4))    // minus the signature
-
-            mstore(0x40,                            // reset free memory pointer
-                   add(x, add(0x40, calldatasize)))
-        }
+        var (callSuccess, retValMem) = multiCall(mem, msg.data.length + 64, outputSize);
 
         // if multiCall returns `false`, a discrepancy has been found
-        if (!multiCall(x, msg.data.length + 0x40, retValMem)) {
+        if (!callSuccess) {
             payBounty();
             return;
         }
 
-        // check if the call should throw
-        bool callSuccess;
-        assembly {
-            callSuccess := mload(retValMem)
-        }
-        if (!callSuccess) {
-            revert();
-        }
-
-        // skip the call success flag and return the output
-        assembly {
-            return(add(retValMem, 0x20), outputSize)
-        }
+        // return the heads' output
+        _return(retValMem, outputSize);
     }
 
-    function multiCall(uint256 args, uint256 argsLen, uint256 retValMem) internal returns (bool success) {
+    function multiCall(uint256 args, uint256 argsLen, uint256 outputSize) internal returns (bool success, uint256 retValMem) {
 
         // the hash of the output from the currently evaluated head.
         bytes32 retHash;
@@ -169,40 +199,16 @@ contract SimpleERC20 {
         // the hash of the output produced by the first head.
         bytes32 firstHeadRetHash;
 
-        // the value returned by the current head
-        uint256 retVal;
-
-        // flag indicating whether the call to the head succeeded or not
-        bool callSuccess;
-
-        // max size of a head's output
-        uint256 outputSize = MAX_HEAD_OUTPUT_SIZE;
-
         // execute all heads one after the other
-        for (uint i = 0; i < heads.length; ++i) {                               // 200 GAS
+        for (uint i = 0; i < heads.length; ++i) {
 
             // call the head. skip the signature of `multiCall` in the args
-            callSuccess = callHead(i,
-                                   args,
-                                   argsLen,
-                                   retValMem);
+            require(_call(msg.gas, heads[i], 0, args, argsLen));
 
-            require(callSuccess);
+            retValMem = _getReturnData();
 
             // get the hash of the return value
-            // compute H(retMem[0:MAX_HEAD_OUTPUT_SIZE])
-            assembly {
-                retHash := sha3(retValMem, outputSize)                          // MAX_RETURN_BYTES/8 * 6
-            }
-
-            if (DEBUG_MODE) {
-
-                assembly {
-                    retVal := mload(retValMem)
-                }
-
-                HeadReturn(retVal, callSuccess);                                // 3 * 375 GAS
-            }
+            retHash = _keccak256(retValMem, _returndatasize());
 
             // first head
             if ( i == 0) {
@@ -213,50 +219,34 @@ contract SimpleERC20 {
 
                 if ( retHash != firstHeadRetHash ) {
                     // discrepancy between heads' outputs or throw behavior
-                    return false;
+                    return (false, 0);
                 }
             }
         }
 
-        // the output is of the form [CALL_SUCCESS, RET_VAL, ADDRESS(opt), VALUE(opt)]
-        address dest;
-        uint256 val;
-        assembly {
-            dest := mload(add(retValMem, 0x40))
-            val := mload(add(retValMem, 0x60))
+        /*
+         * The output is of the form [CALL_SUCCESS, RET_VAL, ADDRESS (optional), VALUE (optional)]
+         * If an ADDRESS and VALUE are returned, this indicates that the head
+         * wants to `send` VALUE to ADDRESS
+         */
+
+        // if the head signals a throw, throw here
+        if (_mload(retValMem) == 0x0) {
+            revert();
         }
 
-        if (val != 0x0) {
-            if (!dest.send(val)) {
+        // execute the send that the heads agreed to
+        if (_returndatasize() > 32 + outputSize) {
+            address dest = address(_mload(retValMem + 32 + outputSize));
+            uint256 val = uint256(_mload(retValMem + 32 + outputSize + 32));
+
+            if (val != 0 && !dest.send(val)) {
                 revert();
             }
         }
 
-        return true;
-    }
-
-    function callHead(uint256 i,
-                      uint256 argsMem,
-                      uint256 argsLen,
-                      uint256 retValMem) private returns (bool callSuccess) {
-
-        address dest = heads[i];                                                // 200 GAS
-
-        uint256 headOutputSize = MAX_HEAD_OUTPUT_SIZE;
-
-        assembly {
-            callSuccess := call(                                                // 700 GAS
-                gas,                    // give all gas
-                dest,                   // destination address
-                0,                      // value
-                argsMem,                // inputs start here
-                argsLen,                // input length
-                retValMem,              // outputs will be written here
-                headOutputSize          // size of outputs
-            )
-        }
-
-        return callSuccess;
+        // skip call success status
+        return (true, retValMem + 32);
     }
 
     /*
@@ -265,15 +255,15 @@ contract SimpleERC20 {
     function payBounty() private {
 
         if (DEBUG_MODE) {
-            BountyPayed();                                                      // 750 GAS
+            BountyPayed();
         }
 
         uint256 bal = this.balance - bountyValue;
         uint256 bounty = bountyValue + bal / 10;
         uint256 rest = this.balance - bounty;
 
-        bountyClaimed = true;                                                   // 20000 GAS
-        msg.sender.send(bounty);                                                //  9700 GAS
-        creator.send(rest);                                                     //  9700 GAS
+        bountyClaimed = true;
+        msg.sender.transfer(bounty);
+        creator.transfer(rest);
     }
 }

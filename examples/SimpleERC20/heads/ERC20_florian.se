@@ -21,11 +21,13 @@ def deposit(_sender: address, _msg_value: uint256):
 
 def withdraw(_sender: address, _msg_value: uint256, _value: uint256):
     if ( _msg_value != 0 ):
-        return(False:bool)
+        ret = array(4)
+        RETURN(ret, 0x80)
 
     # sender has enough resources AND send worked
     if ( lt(self._accountBalances[_sender], _value) ):
-        return(False:bool)
+        ret = array(4)
+        RETURN(ret, 0x80)
 
     # reduce funds BEFORE we send
     self._accountBalances[_sender] -= _value
@@ -40,7 +42,8 @@ def withdraw(_sender: address, _msg_value: uint256, _value: uint256):
     
 def const totalSupply(_sender: address, _msg_value: uint256):
     if ( _msg_value != 0 ):
-        return(False:bool)
+        ret = array(2)
+        RETURN(ret, 0x40)
 
     ret = array(2)
     ret[0] = True
@@ -49,7 +52,8 @@ def const totalSupply(_sender: address, _msg_value: uint256):
 
 def const balanceOf(_sender: address, _msg_value: uint256, _owner: address):
     if ( _msg_value != 0 ):
-        return(False:bool)
+        ret = array(2)
+        RETURN(ret, 0x40)
 
     ret = array(2)
     ret[0] = True
@@ -58,7 +62,8 @@ def const balanceOf(_sender: address, _msg_value: uint256, _owner: address):
 
 def transfer(_sender: address, _msg_value: uint256, _to: address, _value: uint256):
     if ( _msg_value != 0 ):
-        return(False:bool)
+        ret = array(2)
+        RETURN(ret, 0x40)
 
     # sender has enough resources
     if ( self._accountBalances[_sender] >= _value ):
@@ -71,11 +76,13 @@ def transfer(_sender: address, _msg_value: uint256, _to: address, _value: uint25
         RETURN(ret, 0x40)
 
     else:
-        return(False:bool)
+        ret = array(2)
+        RETURN(ret, 0x40)
 
 def transferFrom(_sender: address, _msg_value: uint256, _from: address, _to: address, _value: uint256):
     if ( _msg_value != 0 ):
-        return(False:bool)
+        ret = array(2)
+        RETURN(ret, 0x40)
 
     # sender is approved to withdraw AND origin account has enough resources
     if ( self._approvals[_from][_sender] >= _value && self._accountBalances[_from] >= _value ):
@@ -88,11 +95,13 @@ def transferFrom(_sender: address, _msg_value: uint256, _from: address, _to: add
         RETURN(ret, 0x40)
 
     else:
-        return(False:bool)
+        ret = array(2)
+        RETURN(ret, 0x40)
 
 def approve(_sender: address, _msg_value: uint256, _spender: address, _value: uint256):
     if ( _msg_value != 0 ):
-        return(False:bool)
+        ret = array(2)
+        RETURN(ret, 0x40)
 
     self._approvals[_sender][_spender] = _value
     ret = array(2)
@@ -102,7 +111,8 @@ def approve(_sender: address, _msg_value: uint256, _spender: address, _value: ui
 
 def allowance(_sender: address, _msg_value: uint256, _owner: address, _spender: address):
     if ( _msg_value != 0 ):
-        return(False:bool)
+        ret = array(2)
+        RETURN(ret, 0x40)
 
     ret = array(2)
     ret[0] = True
