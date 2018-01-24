@@ -97,15 +97,10 @@ checkInstrumentable ops = checkForbidden ops >> checkPC ops
           aux n PC _ = Left (n, "PC not follwed by JUMP/JUMPI is a forbidden operation. Cannot instrument.")
           aux n _ _ = Right()
 
-oldProgramCountersToTags :: [Opcode] -> [(Integer, String)]
-oldProgramCountersToTags contract = mapMaybe aux (zip contract (programCounters contract))
-    where aux (JUMPDEST, pc) = Just (pc, "oldpc" ++ show pc)
-          aux _              = Nothing
-
 lift :: [Opcode] -> ([OpcodePlus], [(Integer, String)])
 lift contract = (contractWithTaggedJumpdests,  jumpdestpcsToTags)
     where contractWithPCs = zip contract (programCounters contract)
-          pc2tag pc = "oldpc" ++ show pc
+          pc2tag pc = printf "oldpc%d" pc
           aux (JUMPDEST, pc) = Just (pc, pc2tag pc)
           aux _              = Nothing
           jumpdestpcsToTags = mapMaybe aux contractWithPCs
@@ -123,26 +118,48 @@ lift contract = (contractWithTaggedJumpdests,  jumpdestpcsToTags)
           aux3 (x : x' : xs) = x : aux3 (x' : xs)
           contractWithStaticJumps = aux3 contractWithTaggedJumpdests
 
-jumptable :: [(Integer, String)] -> [OpcodePlus]
-jumptable = (begin ++) . (++ end) . concatMap aux
-    where aux (i, t) = fromRight . consError "jumptable" . checkOps [] $
-                       [ StateForce          ⤳ S [V "old destination"]
-                       , TagPush t           ⤳ S [N "potential new destination", V "old destination"]
-                       , DUP 2               ⤳ S [V "old destination", V "potential new destination", V "old destination"]
-                       , Push i              ⤳ S [N "potential old destination", V "old destination", V "potential new destination", V "old destination"]
-                       , EQ                  ⤳ S [N "potential old destination == old destination", V "potential new destination", V "old destination"]
-                       , TagJumpi "makejump" ⤳ S [V "potential new destination", V "old destination"]
-                       , POP                 ⤳ S [V "old destination"]
-                       ]
+data JumpTree = Empty | Node Integer String JumpTree JumpTree deriving (Show, Eq)
+
+buildJumpTree :: [(Integer, String)] -> JumpTree
+buildJumpTree = aux . sortBy (compare `on` fst)
+    where aux [] = Empty
+          aux xs = let middle = length xs `div` 2
+                       left = take middle xs
+                       median = xs !! middle
+                       right = drop (middle + 1) xs
+                       (i, t) = median
+                   in Node i t (aux left) (aux right)
+
+jumpTreeCode :: JumpTree -> [OpcodePlus]
+jumpTreeCode jt = begin ++ aux jt
+    where tag Empty = "die" -- This depends on details of how ProcedureCalls work
+          tag (Node i _ _ _ ) = printf "jumptree_%d" i
+          aux Empty = []
+          aux n@(Node i t j1 j2) = concat [ aux j1
+                                          , aux j2
+                                          , fromRight . consError "jumptree" . checkOps [] $
+                                          [ StateForce          ⤳ Ø
+                                          , TagJumpdest (tag n) ⤳ S [V "old destination"]
+                                          , DUP 1               ⤳ S [V "old destination", V "old destination"]
+                                          , Push i              ⤳ S [N "potential old destination", V "old destination", V "old destination"]
+                                          , GT                  ⤳ S [N "old destination < potential old destination", V "old destination"]
+                                          , TagJumpi (tag j1)   ⤳ S [V "old destination"]
+                                          , DUP 1               ⤳ S [V "old destination", V "old destination"]
+                                          , Push i              ⤳ S [N "potential old destination", V "old destination", V "old destination"]
+                                          , LT                  ⤳ S [N "potential old destination < old destination", V "old destination"]
+                                          , TagJumpi (tag j2)   ⤳ S [V "old destination"]
+                                          , POP                 ⤳ S []
+                                          , TagJump t           ⤳ Ø
+                                          ]
+                                          ]
           begin = fromRight . consError "jumptable begin" . checkOps [] $
-                  [ StateForce              ⤳ Ø
-                  , TagJumpdest "makejump"  ⤳ S [V "new destination", V "old destination"]
-                  , SWAP 1                  ⤳ S [V "old destination", V "new destination"]
-                  , POP                     ⤳ S [V "new destination"]
-                  , Op JUMP                 ⤳ Ø
-                  , TagJumpdest "jumptable" ⤳ S [V "old destination"]
+                  [ StateForce                   ⤳ Ø
+                  , TagJumpdest "jumptable"      ⤳ S [V "old destination"]
+                  , TagJump (tag jt)             ⤳ Ø
                   ]
-          end = [ ProcedureCall "die" ]
+
+jumptable :: [(Integer, String)] -> [OpcodePlus]
+jumptable = jumpTreeCode . buildJumpTree
 
 instrumentOps :: Integer -> [OpcodePlus] -> [OpcodePlus]
 instrumentOps mc = concatMap aux
