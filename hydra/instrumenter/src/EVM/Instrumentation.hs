@@ -7,12 +7,15 @@ module EVM.Instrumentation
 
 import           Control.Monad
 import qualified Data.ByteString as B (length)
+import           Data.Function
 import           Data.List
 import           Data.Maybe
 import           Data.Word
 import           EVM.Bytecode    (Opcode (..), assemble, opcodeSize,
                                   programCounters)
 import           Prelude         hiding (EQ, GT, LT)
+import           Text.Printf
+
 
 data OpcodePlus = Op Opcode
                 | TagJumpdest String
@@ -100,13 +103,25 @@ oldProgramCountersToTags contract = mapMaybe aux (zip contract (programCounters 
           aux _              = Nothing
 
 lift :: [Opcode] -> ([OpcodePlus], [(Integer, String)])
-lift contract = (map aux2 contractWithPCs,  mapMaybe aux contractWithPCs)
-    where pc2tag pc = "oldpc" ++ show pc
+lift contract = (contractWithTaggedJumpdests,  jumpdestpcsToTags)
+    where contractWithPCs = zip contract (programCounters contract)
+          pc2tag pc = "oldpc" ++ show pc
           aux (JUMPDEST, pc) = Just (pc, pc2tag pc)
           aux _              = Nothing
+          jumpdestpcsToTags = mapMaybe aux contractWithPCs
           aux2 (JUMPDEST, pc) = TagJumpdest (pc2tag pc)
           aux2 (op, _)        = Op op
-          contractWithPCs = zip contract (programCounters contract)
+          contractWithTaggedJumpdests = map aux2 contractWithPCs
+          aux3 [] = []
+          aux3 [x] = [x]
+          aux3 (Op (PUSH w pc) : Op JUMP : xs) = case lookup pc jumpdestpcsToTags of
+                                                     (Just t) -> TagJump t : aux3 xs
+                                                     Nothing  -> Op (PUSH w pc) : Op JUMP : aux3 xs
+          aux3 (Op (PUSH w pc) : Op JUMPI : xs) = case lookup pc jumpdestpcsToTags of
+                                                      (Just t) -> TagJumpi t : aux3 xs
+                                                      Nothing  -> Op (PUSH w pc) : Op JUMPI : aux3 xs
+          aux3 (x : x' : xs) = x : aux3 (x' : xs)
+          contractWithStaticJumps = aux3 contractWithTaggedJumpdests
 
 jumptable :: [(Integer, String)] -> [OpcodePlus]
 jumptable = (begin ++) . (++ end) . concatMap aux
