@@ -101,6 +101,7 @@ data Expr = Lit Integer
 
 data Stmt = Let String Expr
           | Assign String Expr
+          | Nest Scope
           | IfElse Expr Scope Scope
           | While Expr Scope
           | Calldatacopy Expr Expr Expr
@@ -212,6 +213,7 @@ compStmt iss oss tagpre = aux
           aux (Assign s e) = if s `elem` ss
                           then (iss, compExpr ss e ++ [Op $ SWAP $ stackIndex ss s, Op POP])
                           else error $ printf "Can't assign %s. Doesn't exist." s
+          aux (Nest s) = (iss, compScope ss (tagpre ++ "_scope") s)
           aux (IfElse e s1 s2) = (iss,  compExpr ss e
                                      ++ [TagJumpi $ label "if"]
                                      ++ compScope ss (tagpre ++ "_elsescope") s2
