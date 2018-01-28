@@ -25,24 +25,24 @@ class TestHydra(PyEthereumTestCase):
         super(TestHydra, cls).setUpClass()
 
         with open(ASSETS + 'ExternalDistort.sol', 'r') as fd:
-            cls.external_distort = cls.s.contract(fd.read(), language='solidity')        
+            cls.external_distort = cls.s.contract(fd.read(), language='solidity')
 
         equivalence_head1_path = ASSETS + 'EquivalenceHead1.sol'
 
-        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT, 
+        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT,
             [equivalence_head1_path], instrument=False)
         deployed_contracts = pyeth_deploy.build_and_deploy()
         _, cls.naked_head = \
             [abi for (addr, abi) in deployed_contracts]
 
-        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT, 
+        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT,
             [equivalence_head1_path], instrument=True)
         deployed_contracts = pyeth_deploy.build_and_deploy()
         cls.single_mc = deployed_contracts[0][1] # deployed_contracts consists of (address, abi) tuples
 
-        cls.single_head_address = deployed_contracts[1][0] 
+        cls.single_head_address = deployed_contracts[1][0]
 
-        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT, 
+        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT,
             [equivalence_head1_path, equivalence_head1_path], instrument=True)
         deployed_contracts = pyeth_deploy.build_and_deploy()
         cls.multi_mc = deployed_contracts[0][1] # deployed_contracts consists of (address, abi) tuples
@@ -65,12 +65,12 @@ class TestHydra(PyEthereumTestCase):
         cls.initial_state = cls.s.snapshot()
 
     def setUp(self):
-        super().setUp()    
+        super().setUp()
         # print(self.single_mc.translator.function_data)
 
         def installLogListener(logs, address):
             def _listener(log):
-                if log.address == address and log.topics == [1337]:
+                if log.address == address and 1337 in log.topics:
                     logs.append(log)
 
             self.s.head_state.log_listeners.append(_listener)
@@ -93,7 +93,7 @@ class TestHydra(PyEthereumTestCase):
 
         kall(self.t, self.s, self.ct, self.single_mc.address, "HYDRA_INIT")
         kall(self.t, self.s, self.ct, self.multi_mc.address, "HYDRA_INIT")
-        
+
         # # TODO(lorenzb): get logs from instrumented heads to make sure they don't log anything
 
 
@@ -105,10 +105,12 @@ class TestHydra(PyEthereumTestCase):
         print('naked head done')
         #configure_logging(config_string=config_string)
         kall(self.t, self.s, self.ct, self.single_mc.address, "doStuff", self.external_distort.address)
-        print('single mc done')        
+        print('single mc done')
         kall(self.t, self.s, self.ct, self.multi_mc.address, "doStuff", self.external_distort.address)
-        print('multi mc done')        
+        print('multi mc done')
 
+        # print([(l.data, l.topics) for l in self.logs_naked_head])
+        # print([(l.data, l.topics) for l in self.logs_single_mc])
         self.assertEqual(
             [(l.data, l.topics) for l in self.logs_naked_head],
             [(l.data, l.topics) for l in self.logs_single_mc])
@@ -191,11 +193,11 @@ class TestMetaContract(PyEthereumTestCase):
         # test that attempting to re-initialize the MetaContract fails
         self.hydra.HYDRA_INIT(self.external.address, self.hydra.address)
         self.assertRaises(self.t.TransactionFailed, lambda: self.hydra.HYDRA_INIT(self.external.address, self.hydra.address))
-        
+
     def test_calls_to_mutliple_heads(self):
         # test outputs when heads all agree
         self.hydra.HYDRA_INIT(self.external.address, self.hydra.address)
-        
+
         self.assertFalse(self.hydra.getMutex())
 
         ret = kall(self.t, self.s, self.ct, self.hydra.address, "return_constant")
