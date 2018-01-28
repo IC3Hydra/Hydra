@@ -4,6 +4,7 @@ import           Control.Monad
 import           Data.Char
 import qualified Data.Text           as T
 import           EVM.Bytecode
+import           EVM.GenericInitcode
 import qualified EVM.Instrumentation as I
 import           System.Environment
 import           System.Exit
@@ -33,7 +34,7 @@ run ["disasm", contract] = either (hPutStrLn stderr) (putStrLn . unlines . map s
 run ["instrument", mc, contract] = do mcaddr <- printErrorAndExit $ parseAddress mc
                                       parsed <- printErrorAndExit $ parseHexString contract
                                       instrumented <- printErrorAndExit $ I.instrument mcaddr parsed
-                                      putStrLn . byteStringToHexString . assemble $ I.genericInitcode ++ instrumented
+                                      putStrLn . byteStringToHexString . assemble $ genericInitcode ++ instrumented
 run _ = do hPutStrLn stderr $ unlines [ "Invalid option. Usage:                                                     "
                                       , "                                                                           "
                                       , "disasm <bytecode>                                                          "
