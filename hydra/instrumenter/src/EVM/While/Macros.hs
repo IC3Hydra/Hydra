@@ -1,5 +1,6 @@
 module EVM.While.Macros
-( add3
+( if_
+, add3
 , and3
 , geq
 , leq

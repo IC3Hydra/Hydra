@@ -28,8 +28,10 @@ squareProg = Scope [(Mstore (Lit 0x0) (ProcCall "square" [(Calldataload (Lit 0x0
 
 squareProgCompiled = compileAndLower [add, multiply, square] squareProg
 
+ownAddress = Proc "ownAddress" [] "address" (Scope [(Let "address2" Address)
+                                                   ,(Assign "address" (Var "address2"))])
 
-selfCallProg = Scope [IfElse (Iszero (Eq Address Caller))
+selfCallProg = Scope [IfElse (Iszero (Eq (ProcCall "ownAddress" []) Caller))
                           (Scope [(Let "_" (Call Gas Address (Lit 0) (Lit 0x0) (Lit 0x0) (Lit 0x0) (Lit 0x40)))
                                  ,(Return (Lit 0x20) (Lit 0x20))])
                           (Scope [(Let "output" (Lit 0x1337133713371337133713371337133713371337133713371337133713371334))
@@ -44,7 +46,7 @@ selfCallProg = Scope [IfElse (Iszero (Eq Address Caller))
                                  ,(Mstore (Lit 0x20) (Var "output"))
                                  ,(Return (Lit 0x0) (Lit 0x40))])]
 
-selfCallProgCompiled = compileAndLower [] selfCallProg
+selfCallProgCompiled = compileAndLower [ownAddress] selfCallProg
 
 memcpyProg name = Scope [(Mstore (Lit 0x0) (Lit 0xe7))
                    ,(Let "_" (Lit 0))

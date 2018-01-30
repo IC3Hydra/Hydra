@@ -259,7 +259,7 @@ compProc (Proc name params output scope) =
     -- stack is [paramn, param1, param2, param3, ..., paramn-1, return_pc]
     ++ [Push 0]
     -- stack is [output, paramn, param1, param2, param3, ..., paramn-1, return_pc]
-    ++ compScope (output:last params:init params) (procTag name) scope
+    ++ compScope (output:rotateRight params) (procTag name) scope
     -- stack is [output, paramn, param1, param2, param3, ..., paramn-1, return_pc]
     ++ swap (length params)
     -- stack is [paramn-1, paramn, param1, param2, param3, ..., output, return_pc]
@@ -270,6 +270,8 @@ compProc (Proc name params output scope) =
     ++ [Op JUMP]
     -- stack is [output]
     where swap i = if i == 0 then [] else if i < 17 then [Op $ SWAP $ fromIntegral i] else error (printf "Proc %s has too many params" name)
+          rotateRight [] = []
+          rotateRight xs = last xs : init xs
 
 compile :: [Proc] -> Scope -> [OpcodePlus]
 compile procs main = compScope [] "" main ++ [Op STOP] ++ (concat $ map compProc procs)
