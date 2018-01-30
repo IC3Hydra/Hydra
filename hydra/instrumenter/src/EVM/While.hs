@@ -129,7 +129,7 @@ data Proc = Proc String [String] String Scope
 
 stackIndex :: (Show a, Eq a) => [a] -> a -> Word8
 stackIndex ss s = let i = (justOrError (printf "Unknown stack item %v" $ show s) (elemIndex s ss)) + 1
-                  in if i <= 16 then fromIntegral i else error "variable out of reach"
+                  in if i <= 16 then fromIntegral i else error ("variable out of reach:" ++ show ss ++ show s)
 
 prog = Scope [(Let "psize" (Mload (Lit 0)))
              ,(Let "pcap" (Mload (Lit 1)))

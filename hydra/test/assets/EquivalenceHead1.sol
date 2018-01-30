@@ -59,6 +59,9 @@ contract EquivalenceHead1 {
             success := call(gas, distort, 0, 50, 100, 200, 100)
             jumpi(pc, iszero(success))
             log1(0, 400, 1337)
+            success := call(gas, distort, 0, 100, 100, 90, 120)
+            jumpi(pc, iszero(success))
+            log1(0, 400, 1337)
 
             mstore(0x00, 0xdd89180b) //bytes4(keccak256("someint(uint256)")) == 0xdd89180b
             mstore(0x20, 0x7292aa)
@@ -71,11 +74,6 @@ contract EquivalenceHead1 {
             jumpi(pc, success)
             log1(0, 400, 1337)
 
-            stop
-
-            success := call(gas, distort, 0, 100, 100, 90, 120)
-            jumpi(pc, iszero(success))
-            log1(0, 400, 1337)
         }
     }
 

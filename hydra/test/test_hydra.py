@@ -38,16 +38,16 @@ class TestHydra(PyEthereumTestCase):
         pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT,
             [equivalence_head1_path], instrument=True)
         deployed_contracts = pyeth_deploy.build_and_deploy()
-        cls.single_mc = deployed_contracts[0][1] # deployed_contracts consists of (address, abi) tuples
+        cls.single_mc_address = deployed_contracts[0][0] # deployed_contracts consists of (address, abi) tuples
 
         cls.single_head_address = deployed_contracts[1][0]
 
-        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT,
-            [equivalence_head1_path, equivalence_head1_path], instrument=True)
-        deployed_contracts = pyeth_deploy.build_and_deploy()
-        cls.multi_mc = deployed_contracts[0][1] # deployed_contracts consists of (address, abi) tuples
-        cls.multi_head1_address = deployed_contracts[1][0]
-        cls.multi_head2_address = deployed_contracts[2][0]
+        # pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT,
+        #     [equivalence_head1_path, equivalence_head1_path], instrument=True)
+        # deployed_contracts = pyeth_deploy.build_and_deploy()
+        # cls.multi_mc = deployed_contracts[0][1] # deployed_contracts consists of (address, abi) tuples
+        # cls.multi_head1_address = deployed_contracts[1][0]
+        # cls.multi_head2_address = deployed_contracts[2][0]
 
         cls.ct = cls.naked_head.translator
 
@@ -56,11 +56,11 @@ class TestHydra(PyEthereumTestCase):
 
         print_address('ExternalDistort', cls.external_distort.address)
         print_address('Naked Head', cls.naked_head.address)
-        print_address('Single Metacontract', cls.single_mc.address)
+        print_address('Single Metacontract', cls.single_mc_address)
         print_address('Single Head', cls.single_head_address)
-        print_address('Multi Metacontract', cls.multi_mc.address)
-        print_address('Multi Head 1', cls.multi_head1_address)
-        print_address('Multi Head 2', cls.multi_head2_address)
+        # print_address('Multi Metacontract', cls.multi_mc.address)
+        # print_address('Multi Head 1', cls.multi_head1_address)
+        # print_address('Multi Head 2', cls.multi_head2_address)
 
         cls.initial_state = cls.s.snapshot()
 
@@ -80,19 +80,19 @@ class TestHydra(PyEthereumTestCase):
         installLogListener(self.logs_naked_head, self.naked_head.address)
 
         self.logs_single_mc = []
-        installLogListener(self.logs_single_mc, self.single_mc.address)
+        installLogListener(self.logs_single_mc, self.single_mc_address)
 
-        self.logs_multi_mc = []
-        installLogListener(self.logs_multi_mc, self.multi_mc.address)
+        # self.logs_multi_mc = []
+        # installLogListener(self.logs_multi_mc, self.multi_mc.address)
 
         # self.events_single_mc = []
-        import sys
-        sys.stdout.flush()
-        self.s.head_state.log_listeners.append(
-            lambda x: (print('SINGLE_MC_EVENT', self.single_mc.translator.listen(x)), sys.stdout.flush()))
+        # import sys
+        # sys.stdout.flush()
+        # self.s.head_state.log_listeners.append(
+        #     lambda x: (print('SINGLE_MC_EVENT', self.single_mc.translator.listen(x)), sys.stdout.flush()))
 
-        kall(self.t, self.s, self.ct, self.single_mc.address, "HYDRA_INIT")
-        kall(self.t, self.s, self.ct, self.multi_mc.address, "HYDRA_INIT")
+        # kall(self.t, self.s, self.ct, self.single_mc_address, "HYDRA_INIT")
+        # kall(self.t, self.s, self.ct, self.multi_mc.address, "HYDRA_INIT")
 
         # # TODO(lorenzb): get logs from instrumented heads to make sure they don't log anything
 
@@ -103,20 +103,21 @@ class TestHydra(PyEthereumTestCase):
 
         self.naked_head.doStuff(self.external_distort.address)
         print('naked head done')
+        self.maxDiff = None
         #configure_logging(config_string=config_string)
-        kall(self.t, self.s, self.ct, self.single_mc.address, "doStuff", self.external_distort.address)
+        kall(self.t, self.s, self.ct, self.single_mc_address, "doStuff", self.external_distort.address)
         print('single mc done')
-        kall(self.t, self.s, self.ct, self.multi_mc.address, "doStuff", self.external_distort.address)
-        print('multi mc done')
+        #kall(self.t, self.s, self.ct, self.multi_mc.address, "doStuff", self.external_distort.address)
+        #print('multi mc done')
 
         # print([(l.data, l.topics) for l in self.logs_naked_head])
         # print([(l.data, l.topics) for l in self.logs_single_mc])
         self.assertEqual(
             [(l.data, l.topics) for l in self.logs_naked_head],
             [(l.data, l.topics) for l in self.logs_single_mc])
-        self.assertEqual(
-            [(l.data, l.topics) for l in self.logs_naked_head],
-            [(l.data, l.topics) for l in self.logs_multi_mc])
+        # self.assertEqual(
+        #     [(l.data, l.topics) for l in self.logs_naked_head],
+        #     [(l.data, l.topics) for l in self.logs_multi_mc])
 
 
 class TestMetaContract(PyEthereumTestCase):

@@ -114,12 +114,18 @@ class HydraDeployment(metaclass=ABCMeta):
 
         # hard-code the head addresses and valid signatures into
         # the Meta Contract
-        self.logger.debug("FORMATTING META-CONTRACT")
-        meta_contract_code = self.format_meta_contract(all_addresses[1:],
-                                                       abi_sigs, init_sig,
-                                                       debug=debug)
+        # self.logger.debug("FORMATTING META-CONTRACT")
+        # meta_contract_code = self.format_meta_contract(all_addresses[1:],
+        #                                                abi_sigs, init_sig,
+        #                                                debug=debug)
+        self.logger.debug("CONSTRUCTING META-CONTRACT")
+        meta_contract_code = utils.decode_hex(check_output(
+            ["stack", "exec", "instrumenter-exe", "--", "metacontract"] + [utils.encode_hex(a) for a in all_addresses[1:]],
+            cwd=self.INSTRUMENTER_PATH).strip())
 
         # instrument all the heads
+        first_head = True
+
         for head_file in self.paths_to_heads:
             with open(head_file) as fd:
                 head_code = fd.read()
@@ -127,15 +133,16 @@ class HydraDeployment(metaclass=ABCMeta):
             language = extract_language(head_file)
             if self.instrument:
                 self.logger.debug("INSTRUMENTING HEAD {}".format(head_file))
-                head_code = self.instrument_head(head_code, language, all_addresses[0])
+                head_code = self.instrument_head(first_head, head_code, language, all_addresses[0])
                 language = "evm"
+                first_head = False
 
             head_codes.append((head_code, language))
 
         self.logger.debug("DEPLOYING ALL CONTRACTS")
 
         self.logger.debug("DEPLOYING THE META-CONTRACT {}".format(self.path_to_metacontract))
-        address, abi = self.deploy_contract(meta_contract_code, extract_language(self.path_to_metacontract), **kwargs)
+        address, abi = self.deploy_contract(meta_contract_code, "evm", **kwargs)
         self.logger.debug("DEPLOYED at 0x{}".format(address.hex()))
         deployed_contracts.append((address, abi))
 
@@ -238,7 +245,40 @@ class HydraDeployment(metaclass=ABCMeta):
         self.temp_chain.revert(state_snapshot)
         return byte_code
 
-    def instrument_head(self, code, language, mc_address):
+    # def instrument_head(self, code, language, mc_address):
+    #     """
+    #     Instruments a contract's bytecode to enable interaction with the Hydra
+    #     Meta Contract
+    #     """
+
+    #     # run the constructor to extract the contract's code
+    #     byte_code = self.run_constructor(code, language)
+
+    #     # Solidity appends a swarm at the end of the compiled code. Remove it!
+    #     # The format is [swarm_start Hash(64) swarm_end]
+    #     swarm_start = "a165627a7a72305820"
+    #     swarm_end = "0029"
+
+    #     swarm_len = (len(swarm_start) + 64 + len(swarm_end))
+    #     start_pos = len(byte_code) - swarm_len
+    #     end_pos = len(byte_code) - len(swarm_end)
+
+    #     if language == 'solidity':
+    #         # check that the swarm is at the end of the file
+    #         assert byte_code[end_pos:] == swarm_end
+    #         assert byte_code[start_pos: start_pos + len(swarm_start)] == swarm_start
+    #         byte_code = byte_code[:start_pos]
+
+    #     # run the instrumenter
+    #     byte_code = check_output(["stack", "exec", "instrumenter-exe",
+    #                               "--", "instrument",
+    #                               "0x{}".format(utils.encode_hex(mc_address)),
+    #                               "{}".format(byte_code)],
+    #                              cwd=self.INSTRUMENTER_PATH).strip()
+
+    #     return utils.decode_hex(byte_code)
+
+    def instrument_head(self, first_head, code, language, mc_address):
         """
         Instruments a contract's bytecode to enable interaction with the Hydra
         Meta Contract
@@ -263,13 +303,15 @@ class HydraDeployment(metaclass=ABCMeta):
             byte_code = byte_code[:start_pos]
 
         # run the instrumenter
+        cmd = "1sthead" if first_head else "nthhead"
         byte_code = check_output(["stack", "exec", "instrumenter-exe",
-                                  "--", "instrument",
+                                  "--", cmd,
                                   "0x{}".format(utils.encode_hex(mc_address)),
                                   "{}".format(byte_code)],
                                  cwd=self.INSTRUMENTER_PATH).strip()
 
         return utils.decode_hex(byte_code)
+
 
     def get_init_function_sig(self):
         """

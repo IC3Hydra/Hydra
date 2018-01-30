@@ -6,6 +6,7 @@ import qualified Data.Text           as T
 import           EVM.Bytecode
 import           EVM.GenericInitcode
 import qualified EVM.Instrumentation as I
+import           EVM.Instrumentation.Metacontract
 import           System.Environment
 import           System.Exit
 import           System.IO
@@ -29,12 +30,21 @@ parseAddress s = do let s' = map toLower $ leftpad 40 '0' $ if "0x" == take 2 s 
                     when (not $ 0 <= i && i < 2^256) $ Left "address must be in range [0..2^256["
                     return i
 
+
+-- TODO(lorenzb): Fix help text
 run :: [String] -> IO ()
 run ["disasm", contract] = either (hPutStrLn stderr) (putStrLn . unlines . map show) . parseHexString $ contract
-run ["instrument", mc, contract] = do mcaddr <- printErrorAndExit $ parseAddress mc
-                                      parsed <- printErrorAndExit $ parseHexString contract
-                                      instrumented <- printErrorAndExit $ I.instrument mcaddr parsed
-                                      putStrLn . byteStringToHexString . assemble $ genericInitcode ++ instrumented
+run ("metacontract" : head1 : heads) = do headaddrs <- sequence $ map (printErrorAndExit . parseAddress) (head1:heads)
+                                          let mc = metacontract headaddrs
+                                          putStrLn . byteStringToHexString . assemble $ genericInitcode ++ mc
+run ["1sthead", mc, contract] = do mcaddr <- printErrorAndExit $ parseAddress mc
+                                   parsed <- printErrorAndExit $ parseHexString contract
+                                   instrumented <- printErrorAndExit $ I.instrumentFirst mcaddr parsed
+                                   putStrLn . byteStringToHexString . assemble $ genericInitcode ++ instrumented
+run ["nthhead", mc, contract] = do mcaddr <- printErrorAndExit $ parseAddress mc
+                                   parsed <- printErrorAndExit $ parseHexString contract
+                                   instrumented <- printErrorAndExit $ I.instrumentNth mcaddr parsed
+                                   putStrLn . byteStringToHexString . assemble $ genericInitcode ++ instrumented
 run _ = do hPutStrLn stderr $ unlines [ "Invalid option. Usage:                                                     "
                                       , "                                                                           "
                                       , "disasm <bytecode>                                                          "
@@ -44,6 +54,19 @@ run _ = do hPutStrLn stderr $ unlines [ "Invalid option. Usage:                 
                                       , "    instruments the given bytecode, adds initcode and prints to stdout     "
                                       ]
            exitWith (ExitFailure 1)
+-- run ["instrument", mc, contract] = do mcaddr <- printErrorAndExit $ parseAddress mc
+--                                       parsed <- printErrorAndExit $ parseHexString contract
+--                                       instrumented <- printErrorAndExit $ I.instrument mcaddr parsed
+--                                       putStrLn . byteStringToHexString . assemble $ genericInitcode ++ instrumented
+-- run _ = do hPutStrLn stderr $ unlines [ "Invalid option. Usage:                                                     "
+--                                       , "                                                                           "
+--                                       , "disasm <bytecode>                                                          "
+--                                       , "    disassembles the given bytecode                                        "
+--                                       , "                                                                           "
+--                                       , "instrument <metacontract> <bytecode>                                       "
+--                                       , "    instruments the given bytecode, adds initcode and prints to stdout     "
+--                                       ]
+--            exitWith (ExitFailure 1)
 
 main :: IO ()
 main = getArgs >>= run

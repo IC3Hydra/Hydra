@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module EVM.Instrumentation
-    ( instrument
+    ( instrumentFirst
+    , instrumentNth
     ) where
 
 import           Control.Monad
@@ -19,6 +20,12 @@ import           Prelude          hiding (EQ, GT, LT)
 import           Text.Printf
 import           Util
 
+instrumentFirst :: Integer -> [Opcode] -> Either String [Opcode]
+instrumentFirst mc contract = instrument mc contract
+
+instrumentNth :: Integer -> [Opcode] -> Either String [Opcode]
+instrumentNth mcaddr parsed = Left "not implemented"
+
 instrument :: Integer -> [Opcode] -> Either String [Opcode]
 instrument mc contract =
     do let ps = procs mc
@@ -27,10 +34,11 @@ instrument mc contract =
        let (contract', pcs2tags) = lift contract
        let jt = jumptable pcs2tags
        let contract'' = instrumentOps mc contract'
-       let contract''' = [ProcedureCall $ procTag "init"] 
+       let contract''' = [ProcedureCall $ procTag "init"]
                          ++ contract''
+                         -- TODO(lorenzb): This STOP is wrong
                          ++ [Op STOP]
-                         ++ cps 
+                         ++ cps
                          ++ jt
        lower contract'''
     -- do let ps = procs mc
@@ -80,7 +88,7 @@ buildJumpTree = aux . sortBy (compare `on` fst)
 
 jumpTreeCode :: JumpTree -> [OpcodePlus]
 jumpTreeCode jt = begin ++ aux jt
-    where tag Empty = procTag "die" -- This depends on details of how ProcedureCalls work
+    where tag Empty = procTag "unknownJumpdest" -- This depends on details of how ProcedureCalls work
           tag (Node i _ _ _ ) = printf "jumptree_%d" i
           aux Empty = []
           aux n@(Node i t j1 j2) = concat [ aux j1
