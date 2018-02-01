@@ -100,8 +100,10 @@ def isBitSet(val:int128, idx:int128):
 
 def OpenDoors(_sender: address, _msg_value: uint256, opened_doors:int128, game_id:int128):
     ret = array(2)
+    ret[0] = True
 
     if ( _msg_value != 0 ):
+        ret[0] = False
         RETURN(ret, 0x40)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
@@ -142,6 +144,11 @@ def OpenDoors(_sender: address, _msg_value: uint256, opened_doors:int128, game_i
 
 def const isOpened(_sender: address, _msg_value: uint256, door_num:int128, game_id:int128):
     ret = array(2)
+    ret[0] = True
+
+    if ( _msg_value != 0 ):
+        ret[0] = False
+        RETURN(ret, 0x40)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
         RETURN(ret, 0x40)
@@ -160,8 +167,10 @@ def const isOpened(_sender: address, _msg_value: uint256, door_num:int128, game_
 
 def PlayMontyRound2(_sender: address, _msg_value: uint256, round2_door_guess:int128, game_id:int128):
     ret = array(2)
+    ret[0] = True
 
     if ( _msg_value != 0 ):
+        ret[0] = False
         RETURN(ret, 0x40)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
@@ -192,8 +201,10 @@ def PlayMontyRound2(_sender: address, _msg_value: uint256, round2_door_guess:int
 
 def EndGame(_sender: address, _msg_value: uint256, winning_door:int128, witness:bytes32, game_id:int128):
     ret = array(6)
+    ret[0] = True
 
     if ( _msg_value != 0 ):
+        ret[0] = False
         RETURN(ret, 0xc0)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
@@ -247,8 +258,10 @@ def EndGame(_sender: address, _msg_value: uint256, winning_door:int128, witness:
 
 def Payout(_sender: address, _msg_value: uint256, house:bool, game_id:int128):
     ret = array(4)
+    ret[0] = True
 
     if ( _msg_value != 0 ):
+        ret[0] = False
         RETURN(ret, 0x80)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
@@ -310,8 +323,10 @@ def Payout(_sender: address, _msg_value: uint256, house:bool, game_id:int128):
     
 def EscapeHatch(_sender: address, _msg_value: uint256):
     ret = array(2)
+    ret[0] = True
 
     if ( _msg_value != 0 ):
+        ret[0] = False
         RETURN(ret, 0x40)
 
     if ( _sender != self.creator ):
@@ -325,8 +340,10 @@ def EscapeHatch(_sender: address, _msg_value: uint256):
 
 def RefundInactive(_sender: address, _msg_value: uint256, game_id:int128):
     ret = array(4)
+    ret[0] = True
 
     if ( _msg_value != 0 ):
+        ret[0] = False
         RETURN(ret, 0x80)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):
@@ -360,8 +377,10 @@ def RefundInactive(_sender: address, _msg_value: uint256, game_id:int128):
 
 def RefundAfterEscapeHatch(_sender: address, _msg_value: uint256, game_id:int128):
     ret = array(4)
+    ret[0] = True
 
     if ( _msg_value != 0 ):
+        ret[0] = False
         RETURN(ret, 0x80)
 
     if ( game_id < 0 || game_id >= self.next_game_id ):

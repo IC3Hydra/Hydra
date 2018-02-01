@@ -103,6 +103,14 @@ contract SimpleERC20 is ASMUtils {
     // set to `true` to have the meta contract log events
     bool constant DEBUG_MODE = true;
 
+    // callback actions
+    uint256 constant LOG0 = 0;
+    uint256 constant LOG1 = 1;
+    uint256 constant LOG2 = 2;
+    uint256 constant LOG3 = 3;
+    uint256 constant LOG4 = 4;
+    uint256 constant SEND = 5;
+
     /* ------- end constant vars ------- */
 
 
@@ -235,18 +243,51 @@ contract SimpleERC20 is ASMUtils {
             revert();
         }
 
-        // execute the send that the heads agreed to
-        if (_returndatasize() > 32 + outputSize) {
-            address dest = address(_mload(retValMem + 32 + outputSize));
-            uint256 val = uint256(_mload(retValMem + 32 + outputSize + 32));
-
-            if (val != 0 && !dest.send(val)) {
-                revert();
-            }
-        }
+        handle_actions(retValMem, outputSize);
 
         // skip call success status
         return (true, retValMem + 32);
+    }
+
+    function handle_actions(uint256 retValMem, uint256 outputSize) private {
+        // execute the interactions that the heads agreed to
+        uint256 j = 32 + outputSize;
+        uint256 ret_size = _returndatasize();
+        while (j < ret_size) {
+            uint256 action = uint256(_mload(retValMem + j));
+
+            if (action == SEND) {
+                address dest = address(_mload(retValMem + j + 32));
+                uint256 val = uint256(_mload(retValMem + j + 64));
+                assert(dest.send(val));
+                j += 96;
+            } else if (action == LOG4) {
+                log4(_mload(retValMem + j + 160),
+                     bytes32(_mload(retValMem + j + 32)),
+                     _mload(retValMem + j + 64),
+                     _mload(retValMem + j + 96),
+                     _mload(retValMem + j + 128));
+                j += 192;
+            } else if (action == LOG3) {
+                log3(_mload(retValMem + j + 128),
+                     bytes32(_mload(retValMem + j + 32)),
+                     _mload(retValMem + j + 64),
+                     _mload(retValMem + j + 96));
+                j += 160;
+            } else if (action == LOG2) {
+                log2(_mload(retValMem + j + 96),
+                     bytes32(_mload(retValMem + j + 32)),
+                     _mload(retValMem + j + 64));
+                j += 128;
+            } else if (action == LOG1) {
+                log1(_mload(retValMem + j + 64),
+                     bytes32(_mload(retValMem + j + 32)));
+                j += 96;
+            } else if (action == LOG0) {
+                log0(_mload(retValMem + j + 32));
+                j += 64;
+            }
+        }
     }
 
     /*

@@ -31,30 +31,36 @@ def is_overflow_add(a : num256, b : num256) -> bool:
 def is_overflow_sub(a : num256, b : num256) -> bool:
     return num256_lt(a, b)
 
-def deposit(_sender : address, _msg_value : num256) -> num256[1]:
+def deposit(_sender : address, _msg_value : num256) -> num256[6]:
     _value = _msg_value
 
+    _fail = [as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0)]
     if self.is_overflow_add(self.balances[_sender], _value):
-        return [as_num256(0)]
+        return _fail
     if self.is_overflow_add(self.num_issued, _value):
-        return [as_num256(0)]
+        return _fail
 
     self.balances[_sender] = num256_add(self.balances[_sender], _value)
     self.num_issued = num256_add(self.num_issued, _value)
-    return [as_num256(1)]
 
-def withdraw(_sender : address, _msg_value : num256, _value : num256) -> num256[4]:
+    # return [throw_status, Log3("Transfer", 0, msg.sender, msg.value)]
+    return [as_num256(1), as_num256(3), as_num256(keccak256("Transfer(address,address,uint256)")), as_num256(0), as_num256(_sender), _msg_value]
+
+def withdraw(_sender : address, _msg_value : num256, _value : num256) -> num256[10]:
+    _fail = [as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0)]
     if _msg_value != as_num256(0):
-        return [as_num256(0), as_num256(0), as_num256(0), as_num256(0)]
+        return _fail
 
     if self.is_overflow_sub(self.balances[_sender], _value):
-        return [as_num256(0), as_num256(0), as_num256(0), as_num256(0)]
+        return _fail
     if self.is_overflow_sub(self.num_issued, _value):
-        return [as_num256(0), as_num256(0), as_num256(0), as_num256(0)]
+        return _fail
 
     self.balances[_sender] = num256_sub(self.balances[_sender], _value)
     self.num_issued = num256_sub(self.num_issued, _value)
-    return [as_num256(1), as_num256(1), as_num256(_sender), _value]
+
+    # return [throw_status, ret_val, SEND(sender, value), Log3("Transfer", msg.sender, 0, value)]
+    return [as_num256(1), as_num256(1), as_num256(5), as_num256(_sender), _value, as_num256(3), as_num256(keccak256("Transfer(address,address,uint256)")), as_num256(_sender), as_num256(0), _value]
 
 @constant
 def totalSupply(_sender : address, _msg_value : num256) -> num256[2]:
@@ -70,43 +76,53 @@ def balanceOf(_sender : address, _msg_value : num256, _owner : address) -> num25
 
     return [as_num256(1), self.balances[_owner]]
 
-def transfer(_sender : address, _msg_value : num256, _to : address, _value : num256) -> num256[2]:
+def transfer(_sender : address, _msg_value : num256, _to : address, _value : num256) -> num256[7]:
+    _fail = [as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0)]
+
     if _msg_value != as_num256(0):
-        return [as_num256(0), as_num256(0)]
+        return _fail
 
     if self.is_overflow_add(self.balances[_to], _value):
-        return [as_num256(0), as_num256(0)]
+        return _fail
     if self.is_overflow_sub(self.balances[_sender], _value):
-        return [as_num256(0), as_num256(0)]
+        return _fail
 
     self.balances[_sender] = num256_sub(self.balances[_sender], _value)
     self.balances[_to] = num256_add(self.balances[_to], _value)
 
-    return [as_num256(1), as_num256(1)]
+    # return [throw_status, ret_val, Log3("Transfer", msg.sender, _to, _value]
+    return [as_num256(1), as_num256(1), as_num256(3), as_num256(keccak256("Transfer(address,address,uint256)")), as_num256(_sender), as_num256(_to), _value]
 
-def transferFrom(_sender : address, _msg_value : num256, _from : address, _to : address, _value : num256) -> num256[2]:
+def transferFrom(_sender : address, _msg_value : num256, _from : address, _to : address, _value : num256) -> num256[7]:
+    _fail = [as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0)]
+
     if _msg_value != as_num256(0):
-        return [as_num256(0), as_num256(0)]
+        return _fail
 
     allowance = self.allowances[_from][_sender]
     if self.is_overflow_add(self.balances[_to], _value):
-        return [as_num256(0), as_num256(0)]
+        return _fail
     if self.is_overflow_sub(self.balances[_from], _value):
-        return [as_num256(0), as_num256(0)]
+        return _fail
     if self.is_overflow_sub(allowance, _value):
-        return [as_num256(0), as_num256(0)]
+        return _fail
     self.balances[_from] = num256_sub(self.balances[_from], _value)
     self.balances[_to] = num256_add(self.balances[_to], _value)
     self.allowances[_from][_sender] = num256_sub(allowance, _value)
 
-    return [as_num256(1), as_num256(1)]
+    # return [throw_status, ret_val, Log3("Transfer", _from, _to, _value]
+    return [as_num256(1), as_num256(1), as_num256(3), as_num256(keccak256("Transfer(address,address,uint256)")), as_num256(_from), as_num256(_to), _value]
 
-def approve(_sender : address, _msg_value : num256, _spender : address, _value : num256) -> num256[2]:
+def approve(_sender : address, _msg_value : num256, _spender : address, _value : num256) -> num256[7]:
+    _fail = [as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0), as_num256(0)]
+
     if _msg_value != as_num256(0):
-        return [as_num256(0), as_num256(0)]
+        return _fail
 
     self.allowances[_sender][_spender] = _value
-    return [as_num256(1), as_num256(1)]
+
+    # return [throw_status, ret_val, Log3("Approval", msg.sender, _spender, _value)]
+    return [as_num256(1), as_num256(1), as_num256(3), as_num256(keccak256("Approval(address,address,uint256)")), as_num256(_sender), as_num256(_spender), _value]
 
 @constant
 def allowance(_sender : address, _msg_value : num256, _owner : address, _spender : address) -> num256[2]:

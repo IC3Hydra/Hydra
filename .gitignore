@@ -1,3 +1,4 @@
 hydra/instrumenter/.stack-work
 **.pyc
 mc.sol
+.DS_Store

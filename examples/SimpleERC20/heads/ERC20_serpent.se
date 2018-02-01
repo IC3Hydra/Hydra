@@ -1,6 +1,11 @@
 macro True: 1
 macro False: 0
 
+macro LOG: 3
+macro SEND: 5
+macro TRANSFER: 100389287136786176327247604509743168900146139575972864366142685224231313322991
+macro APPROVAL: 63486140976153616755203102783360879283472101686154884697241723088393386309925
+
 # mapping from account address to current balance
 data _accountBalances[2^256]
 
@@ -13,32 +18,47 @@ data total_supply
 def deposit(_sender: address, _msg_value: uint256):
     # use unsigned LT(x, y)
     if ( lt(self.total_supply + _msg_value, self.total_supply) ):
-        return(False:bool)
+        ret = array(6)
+        RETURN(ret, 6*32)
 
     self._accountBalances[_sender] += _msg_value
     self.total_supply += _msg_value
-    return(True:bool)
+
+    ret = array(6)
+    ret[0] = True
+    ret[1] = LOG
+    ret[2] = TRANSFER
+    ret[3] = 0
+    ret[4] = _sender
+    ret[5] = _msg_value
+    RETURN(ret, 6*32)
 
 def withdraw(_sender: address, _msg_value: uint256, _value: uint256):
     if ( _msg_value != 0 ):
-        ret = array(4)
-        RETURN(ret, 0x80)
+        ret = array(10)
+        RETURN(ret, 10*32)
 
     # sender has enough resources AND send worked
     if ( lt(self._accountBalances[_sender], _value) ):
-        ret = array(4)
-        RETURN(ret, 0x80)
+        ret = array(10)
+        RETURN(ret, 10*32)
 
     # reduce funds BEFORE we send
     self._accountBalances[_sender] -= _value
     self.total_supply -= _value
 
-    ret = array(4)
+    ret = array(10)
     ret[0] = True
     ret[1] = True
-    ret[2] = _sender
-    ret[3] = _value
-    RETURN(ret, 0x80)
+    ret[2] = SEND
+    ret[3] = _sender
+    ret[4] = _value
+    ret[5] = LOG
+    ret[6] = TRANSFER
+    ret[7] = _sender
+    ret[8] = 0
+    ret[9] = _value
+    RETURN(ret, 10*32)
     
 def const totalSupply(_sender: address, _msg_value: uint256):
     if ( _msg_value != 0 ):
@@ -62,52 +82,67 @@ def const balanceOf(_sender: address, _msg_value: uint256, _owner: address):
 
 def transfer(_sender: address, _msg_value: uint256, _to: address, _value: uint256):
     if ( _msg_value != 0 ):
-        ret = array(2)
-        RETURN(ret, 0x40)
+        ret = array(7)
+        RETURN(ret, 7*32)
 
     # sender has enough resources
     if ( self._accountBalances[_sender] >= _value ):
 
         self._accountBalances[_sender] -= _value
         self._accountBalances[_to] += _value
-        ret = array(2)
+        ret = array(7)
         ret[0] = True
         ret[1] = True
-        RETURN(ret, 0x40)
+        ret[2] = LOG
+        ret[3] = TRANSFER
+        ret[4] = _sender
+        ret[5] = _to
+        ret[6] = _value
+        RETURN(ret, 7*32)
 
     else:
-        ret = array(2)
-        RETURN(ret, 0x40)
+        ret = array(7)
+        RETURN(ret, 7*32)
 
 def transferFrom(_sender: address, _msg_value: uint256, _from: address, _to: address, _value: uint256):
     if ( _msg_value != 0 ):
-        ret = array(2)
-        RETURN(ret, 0x40)
+        ret = array(7)
+        RETURN(ret, 7*32)
 
     # sender is approved to withdraw AND origin account has enough resources
     if ( self._approvals[_from][_sender] >= _value && self._accountBalances[_from] >= _value ):
         self._approvals[_from][_sender] -= _value
         self._accountBalances[_from] -= _value
         self._accountBalances[_to] += _value
-        ret = array(2)
+        ret = array(7)
         ret[0] = True
         ret[1] = True
-        RETURN(ret, 0x40)
+        ret[2] = LOG
+        ret[3] = TRANSFER
+        ret[4] = _from
+        ret[5] = _to
+        ret[6] = _value
+        RETURN(ret, 7*32)
 
     else:
-        ret = array(2)
-        RETURN(ret, 0x40)
+        ret = array(7)
+        RETURN(ret, 7*32)
 
 def approve(_sender: address, _msg_value: uint256, _spender: address, _value: uint256):
     if ( _msg_value != 0 ):
-        ret = array(2)
-        RETURN(ret, 0x40)
+        ret = array(7)
+        RETURN(ret, 7*32)
 
     self._approvals[_sender][_spender] = _value
-    ret = array(2)
+    ret = array(7)
     ret[0] = True
     ret[1] = True
-    RETURN(ret, 0x40)
+    ret[2] = LOG
+    ret[3] = APPROVAL
+    ret[4] = _sender
+    ret[5] = _spender
+    ret[6] = _value
+    RETURN(ret, 7*32)
 
 def allowance(_sender: address, _msg_value: uint256, _owner: address, _spender: address):
     if ( _msg_value != 0 ):

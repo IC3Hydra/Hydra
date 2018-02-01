@@ -8,7 +8,7 @@ from examples.SimpleMontyHall.test import *
 from utils.pyethereum_test_utils import PyEthereumHydraDeployment
 from utils.deployment import get_contract_translator, kall
 
-from examples.SimpleMontyHall.test import mh_head_test
+from examples.MontyHall.test import mh_head_test
 
 from ethereum.slogging import configure_logging
 config_string = ':trace'

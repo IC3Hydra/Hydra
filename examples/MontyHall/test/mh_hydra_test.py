@@ -3,17 +3,14 @@ import unittest
 from ethereum import utils
 import types
 
-from examples.MontyHall.test.utils import *
-
 from utils.pyethereum_test_utils import PyEthereumHydraDeployment
 from utils.deployment import get_contract_translator, kall
 
-from examples.MontyHall.test import mh_head_test
+from examples.MontyHall.test import META_CONTRACT, PATH_TO_HEADS, mh_head_test
 
 from ethereum.slogging import configure_logging
 config_string = ':trace'
 #configure_logging(config_string=config_string)
-
 
 def deploy_montyhall_mc(_tester, chain):
     mc_path = META_CONTRACT
