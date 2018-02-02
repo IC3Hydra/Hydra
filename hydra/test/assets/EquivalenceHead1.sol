@@ -5,7 +5,113 @@ contract EquivalenceHead1 {
     function HYDRA_INIT() {
     }
 
-    function doStuff(address distort) {
+    function testLogs() {
+        assembly {
+            mstore(0, 6834682349242349287492)
+            mstore(32, 61231749273910742817123)
+
+            log0(0, 0)
+            log1(0, 0, 1337)
+            log2(0, 0, 1337, not(1))
+            log3(0, 0, 1337, 2, 1)
+            log4(0, 0, 3, 1337, 91, 17)
+
+            log0(0, 1)
+            log1(0, 2, 1337)
+            log2(0, 1, 1337, 999)
+            log3(0, 3, 1337, 999, 888)
+            log4(0, 31, 1337, 999, 888, 777)
+
+            log1(0, 32, 1337)
+            log1(0, 33, 1337)
+            log2(1, 100, 1337, 999)
+            log3(32, 200, 1337, 999, 888)
+            log4(33, 100, 1337, 999, 888, 777)
+
+            log1(100, 100, 1337)
+        }
+    }
+
+    function testCalldata1(uint x, uint16 y) {
+        assembly {
+            log2(0, 0, calldatasize, 1337)
+            log2(0, 0, calldataload(0), 1337)
+            log2(0, 0, calldataload(1), 1337)
+            log2(0, 0, calldataload(32), 1337)
+            log2(0, 0, calldataload(sub(calldatasize, 1)), 1337)
+            log2(0, 0, calldataload(calldatasize), 1337)
+            log2(0, 0, calldataload(add(calldatasize, 1)), 1337)
+            log2(0, 0, calldataload(0xFFFFF), 1337)
+            // TODO(lorenzb): Probably failing because of head1
+            // log2(0, 0, calldataload(sub(not(0), 1)), 1337)
+            // log2(0, 0, calldataload(not(0)), 1337)
+        }
+    }
+
+    function testCalldata2(uint x, uint16 y) {
+        assembly {
+            log2(0, 0, calldatasize, 1337)
+
+            calldatacopy(0, 0, 1)
+            log1(0, 100, 1337)
+
+            calldatacopy(0, 0xFFFFFFFF, 100)
+            log1(0, 100, 1337)
+
+            calldatacopy(0, 0, 31)
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(0, 0, 32)
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(0, 0, 33)
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(0, 0, sub(calldatasize, 1))
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(0, 0, calldatasize)
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(0, 0, add(calldatasize, 1))
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(0, 0, add(calldatasize, 32))
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(0, 1, sub(calldatasize, 1))
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(1, 1, sub(calldatasize, 1))
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(32, 1, 100)
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(33, 1, 100)
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(33, 32, 100)
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            // TODO(lorenzb): Test very high values for src
+        }
+    }
+
+
+    function testExternalCalls(address distort) {
         assembly {
             let success := 0
             mstore(0, distort)
@@ -64,6 +170,12 @@ contract EquivalenceHead1 {
             success := call(gas, distort, 0, 100, 100, 90, 120)
             jumpi(pc, iszero(success))
             log1(0, 400, 1337)
+        }
+    }
+
+    function testSelfCalls() {
+        assembly {
+            let success := 0
 
             mstore(0x00, 0xdd89180b) //bytes4(keccak256("someint(uint256)")) == 0xdd89180b
             mstore(0x20, 0x7292aa)
@@ -75,7 +187,6 @@ contract EquivalenceHead1 {
             success := call(gas, address, 0, 0, 4, 0, 0)
             jumpi(pc, success)
             log1(0, 400, 1337)
-
         }
     }
 

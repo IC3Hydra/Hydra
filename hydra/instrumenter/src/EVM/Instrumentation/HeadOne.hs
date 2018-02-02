@@ -177,11 +177,12 @@ procInit = Proc "init" [] "_" (Scope
            [(checkOrDie (M.and3 (Or (Eq Caller (ProcCall "mc" [])) (Eq Caller Address))
                                 (Iszero Callvalue)
                                 (Gt Calldatasize (Lit (0x40-1)))))
+           ,(checkOrErr errorIncorrectCalldataSize (Eq (Sub Calldatasize (Lit 0x60)) (Calldataload (Lit 0x40))))
            ,(Mstore (Lit 0x00) (Lit memoryStashSize))
            ,(Mstore (Lit (memoryStashSize - 0x20)) (Lit 1))])
 
 procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "_" (Scope
-                   [(Discard (Lit 314159265358979)),(Calldatacopy (Add (Var "dst") (Mload (Lit 0x00))) (Add (Var "src") (Lit 0x40)) (Var "size"))])
+                   [(Discard (Lit 314159265358979)),(Calldatacopy (Add (Var "dst") (Mload (Lit 0x00))) (Add (Var "src") (Lit 0x60)) (Var "size"))])
 
 procLog0 = Proc "log0" ["in_offset", "in_size"] "_" (Scope
            [Discard (ProcCall "log" [(Lit 0), (Var "in_offset"), (Var "in_size"), (Lit 0), (Lit 0), (Lit 0), (Lit 0)])])

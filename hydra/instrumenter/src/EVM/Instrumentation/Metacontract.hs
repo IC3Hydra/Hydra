@@ -102,7 +102,7 @@ procInner = Proc "inner" [] "_" (Scope
             -- Mem: [caller, callvalue, calldatasize] ++ calldata
             ,(Let "trace_size_offset" (Add Calldatasize (Lit 0x20)))
             ,(Let "trace_offset" (Add (Var "trace_size_offset") (Lit 0x20)))
-            ,(Let "success1" (callHead Gas (headAddress (Lit 0)) (Lit 0) (Lit 0x00) (Var "trace_offset") (Lit 0x00) (Lit 0x00)))
+            ,(Let "success1" (callHead Gas (headAddress (Lit 0)) (Lit 0) (Lit 0x00) (Var "trace_size_offset") (Lit 0x00) (Lit 0x00)))
             ,(Returndatacopy (Var "trace_size_offset") (Lit 0x20) (Sub Returndatasize (Lit 0x20)))
             -- Mem: [caller, callvalue, calldatasize] ++ calldata ++ [trace_size] ++ trace ++ returndata
             ,(Let "trace_size" (Mload (Var "trace_size_offset")))

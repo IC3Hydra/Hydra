@@ -96,30 +96,49 @@ class TestHydra(PyEthereumTestCase):
 
         # # TODO(lorenzb): get logs from instrumented heads to make sure they don't log anything
 
-
-    def test_Bla(self):
+    def test_agreement(self):
         from ethereum.slogging import configure_logging
         config_string = ':trace'
 
-        self.naked_head.doStuff(self.external_distort.address)
-        print('naked head done')
-        self.maxDiff = None
-        kall(self.t, self.s, self.ct, self.single_mc_address, "doStuff", self.external_distort.address)
-        print('single mc done')
-        ######
-        #configure_logging(config_string=config_string)
-        ######
-        kall(self.t, self.s, self.ct, self.multi_mc_address, "doStuff", self.external_distort.address)
-        print('multi mc done')
+        subtests = [
+            ("testLogs", []),
+            ("testCalldata1", [utils.bytearray_to_int(utils.sha3(b"foobar")), 0xfa14]),
+            ("testCalldata2", [utils.bytearray_to_int(utils.sha3(b"foobar")), 0xfa14]),
+            ("testExternalCalls", [self.external_distort.address]),
+            ("testSelfCalls", []),
+        ]
 
-        # print([(l.data, l.topics) for l in self.logs_naked_head])
-        # print([(l.data, l.topics) for l in self.logs_single_mc])
-        self.assertEqual(
-            [(l.data, l.topics) for l in self.logs_naked_head],
-            [(l.data, l.topics) for l in self.logs_single_mc])
-        self.assertEqual(
-            [(l.data, l.topics) for l in self.logs_naked_head],
-            [(l.data, l.topics) for l in self.logs_multi_mc])
+        for (fn, args) in subtests:
+            # if fn != "testCalldata2": continue
+
+            with self.subTest(function=fn):
+                print('Subtest function:', fn)
+
+                kall(self.t, self.s, self.ct, self.naked_head.address, fn, *args)
+                print('naked head done')
+
+                #configure_logging(config_string=config_string)
+
+                kall(self.t, self.s, self.ct, self.single_mc_address, fn, *args)
+                print('single mc done')
+                ######
+                #configure_logging(config_string=config_string)
+                ######
+                kall(self.t, self.s, self.ct, self.multi_mc_address, fn, *args)
+                print('multi mc done')
+
+                # print([(l.data, l.topics) for l in self.logs_naked_head])
+                # print([(l.data, l.topics) for l in self.logs_single_mc])
+                self.assertEqual(
+                    [(l.data, l.topics) for l in self.logs_naked_head],
+                    [(l.data, l.topics) for l in self.logs_single_mc])
+                self.assertEqual(
+                    [(l.data, l.topics) for l in self.logs_naked_head],
+                    [(l.data, l.topics) for l in self.logs_multi_mc])
+
+                self.logs_naked_head = []
+                self.logs_single_mc = []
+                self.logs_multi_mc = []
 
 
 class TestMetaContract(PyEthereumTestCase):

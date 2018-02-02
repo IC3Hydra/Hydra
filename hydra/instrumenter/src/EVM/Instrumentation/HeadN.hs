@@ -194,25 +194,22 @@ procCalldataload = Proc "calldataload" ["offset"] "data" (Scope
                    ,(Assign "data" (Mload (Var "memloc")))
                    ,(Mstore (Var "memloc") (Var "backup"))])
 
-procCalldatasize = let calldatasizeOffset = 0x40 in
-                   Proc "calldatasize" [] "size" (Scope
-                   [(Assign "size" (Calldataload (Lit calldatasizeOffset)))])
+procCalldatasize = Proc "calldatasize" [] "size" (Scope
+                   [(Assign "size" (Calldataload (Lit calldatasizeCOffset)))])
 
-procCalldatacopy = let calldatasizeOffset = 0x40
-                       calldataOffset = 0x60 in
-                   Proc "calldatacopy" ["dst", "src", "size"] "data" (Scope
+procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "data" (Scope
                    [(IfElse (Iszero (Var "size"))
                          (Scope [])
-                         (Scope [(Let "calldata_size" (Calldataload (Lit calldatasizeOffset)))
+                         (Scope [(Let "calldata_size" (Calldataload (Lit calldatasizeCOffset)))
                                 -- Overflow protected adjustment for "dst"
                                 ,(Assign "dst" (offsetMem (Var "dst")))
                                 -- Overflow protected adjustment for "src"
                                 ,(Assign "src" (Add (ProcCall "min" [(Var "src"), (Var "calldata_size")])
-                                                    (Lit calldataOffset)))
+                                                    (Lit calldataCOffset)))
                                 -- Overflow protection for "size"
                                 ,(checkOrDie (Lt (Var "size") (Lit maxMem)))
                                 -- How much actual calldata is there to copy?
-                                ,(Let "copy" (ProcCall "min" [(Sub (Add (Lit calldataOffset) (Var "calldata_size"))
+                                ,(Let "copy" (ProcCall "min" [(Sub (Add (Lit calldataCOffset) (Var "calldata_size"))
                                                                    (Var "src"))
                                                              ,(Var "size")]))
                                 -- Copy actual calldata

@@ -19,6 +19,7 @@ errorWrongOutputFormat = 0x1337c0ffee00000006
 errorWrongInputFormat = 0x1337c0ffee00000007
 errorFailedSelfCallInteracted = 0x1337c0ffee00000008
 errorPrecompileCalledWithNonzeroValue = 0x1337c0ffee00000009
+errorIncorrectCalldataSize = 0x1337c0ffee0000000a
 
 -- crash code = revertWord code
 --assert e = (M.if_ (Iszero e) (crash errorAssert))
