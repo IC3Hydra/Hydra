@@ -7,6 +7,7 @@ contract EquivalenceHead1 {
 
     function doStuff(address distort) {
         assembly {
+            let success := 0
             mstore(0, distort)
             log1(0, 32, 1337)
             mstore(0, 0)
@@ -20,7 +21,7 @@ contract EquivalenceHead1 {
             log3(0, 1, 1337, 999, 888)
             log4(0, 1, 1337, 999, 888, 777)
 
-            let success := call(gas, distort, 0, 10, 10, 0, 9)
+            success := call(gas, distort, 0, 10, 10, 0, 9)
             jumpi(pc, iszero(eq(success, 1)))
             log1(0, 100, 1337)
 

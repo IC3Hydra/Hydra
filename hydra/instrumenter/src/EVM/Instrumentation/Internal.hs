@@ -4,6 +4,7 @@ where
 import           Data.List
 import           EVM.Bytecode
 import           EVM.BytecodePlus
+import           EVM.Instrumentation.Common
 import           EVM.While
 import qualified EVM.While.Macros as M
 import           Prelude          hiding (EQ, GT, LT)
@@ -33,12 +34,12 @@ instrumentOps mc = concatMap aux
           aux (Op CALLVALUE)    = [ Push 0x20       -- ⤳ S [N "0x20"]
                                   , Op $ CALLDATALOAD    -- ⤳ S [N "calldata[0x20]"]
                                   ]
-          aux (Op CALLDATALOAD) = [ Push 0x40 -- ⤳ S [N "calldata stash size", V "offset"]
+          aux (Op CALLDATALOAD) = [ Push 0x60 -- ⤳ S [N "calldata stash size", V "offset"]
                                   , Op $ ADD                     -- ⤳ S [N "offset + calldata stash size"]
                                   , Op $ CALLDATALOAD            -- ⤳ S [N "C[offset + calldata stash size]"]
                                   ]
           aux (Op CALLDATASIZE) = [ Op $ CALLDATASIZE           -- ⤳ S [N "calldata size"]
-                                  , Push 0x40 -- ⤳ S [N "calldata stash size", V "calldata size"]
+                                  , Push 0x60 -- ⤳ S [N "calldata stash size", V "calldata size"]
                                   , Op $ (SWAP  1)               -- ⤳ S [V "calldata size", V "calldata stash size"]
                                   , Op $ SUB                     -- ⤳ S [N "calldata size - calldata stash size"]
                                   ]
@@ -153,6 +154,7 @@ procs mc = [ procMemcpy
            , procInit
            , procMc mc
            , procUnknownJumpdest
+           , procReturndataload
            ]
 
 maxPrecompileAddress = 32
@@ -243,27 +245,26 @@ procCall = Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offse
                        ,(IfElse (Eq (Var "to") (ProcCall "mc" []))
                              (Scope [(IfElse (Gt (Var "value") (Balance (ProcCall "mc" [])))
                                           (Scope [(Assign "success" (Lit 0))])
-                                          (Scope [(Nest (Scope[(Let "backup1" (Mload (Sub (Var "in_offset") (Lit 0x40))))
-                                                              ,(Let "backup2" (Mload (Sub (Var "in_offset") (Lit 0x20))))
-                                                              ,(Mstore (Sub (Var "in_offset") (Lit 0x40)) (ProcCall "mc" []))
-                                                              ,(Mstore (Sub (Var "in_offset") (Lit 0x20)) (Var "value"))
-                                                              ,(Assign "success" (Call Gas Address (Lit 0) (Sub (Var "in_offset") (Lit 0x40)) (Add (Var "in_size") (Lit 0x40)) (Lit 0x00) (Lit 0x00)))
+                                          (Scope [(Nest (Scope[(Let "_" (ProcCall "memcpy2" [(Lit backupOffset), (Sub (Var "in_offset") (Lit 0x60)), (Lit 0x60)]))
+                                                              ,(Mstore (Sub (Var "in_offset") (Lit 0x60)) (ProcCall "mc" []))
+                                                              ,(Mstore (Sub (Var "in_offset") (Lit 0x40)) (Var "value"))
+                                                              ,(Mstore (Sub (Var "in_offset") (Lit 0x20)) (Var "in_size"))
+                                                              ,(Assign "success" (Call Gas Address (Lit 0) (Sub (Var "in_offset") (Lit 0x60)) (Add (Var "in_size") (Lit 0x60)) (Lit 0x00) (Lit 0x00)))
                                                               -- TODO(lorenzb): This makes OOG unrecoverable in the caller. Problem?
-                                                              ,(assert (M.leq (Lit 0x20) Returndatasize))
+                                                              ,(assert (M.leq (Lit 0x40) Returndatasize))
                                                               -- Restore backup
-                                                              ,(Mstore (Sub (Var "in_offset") (Lit 0x40)) (Var "backup1"))
-                                                              ,(Mstore (Sub (Var "in_offset") (Lit 0x20)) (Var "backup2"))]))
+                                                              ,(Assign "_" (ProcCall "memcpy2" [(Sub (Var "in_offset") (Lit 0x60)), (Lit backupOffset), (Lit 0x60)]))]))
                                                  -- Append trace
-                                                 ,(Returndatacopy (Lit backupOffset) (Lit 0x00) (Lit 0x20))
-                                                 ,(Let "call_trace_size" (Mload (Lit backupOffset)))
-                                                 ,(Returndatacopy (Var "record_ptr") (Lit 0x20) (Var "call_trace_size"))
+                                                 ,(assert (Eq (returndataload (Lit 0x00)) (Lit 1)))
+                                                 ,(Let "call_trace_size" (returndataload (Lit 0x20)))
+                                                 ,(Returndatacopy (Var "record_ptr") (Lit 0x40) (Var "call_trace_size"))
                                                  ,(Assign "record_ptr" (Add (Var "record_ptr") (Var "call_trace_size")))
                                                  -- update trace length
                                                  ,(Assign "trace_size" (Add (Var "trace_size") (Sub (Var "record_ptr") (Var "record_start"))))
                                                  ,(assert (M.leq (Var "trace_size") (Lit maxTraceSize)))
                                                  ,(Mstore (Lit traceOffset) (Var "trace_size"))
                                                  -- returnvalue
-                                                 ,(Let "returndata_start" (Add (Var "call_trace_size") (Lit 0x20)))
+                                                 ,(Let "returndata_start" (Add (Var "call_trace_size") (Lit 0x40)))
                                                  ,(Let "returndata_size" (Sub Returndatasize (Var "returndata_start")))
                                                  ,(Returndatacopy (Var "out_offset") (Var "returndata_start") (ProcCall "min" [(Var "out_size"), (Var "returndata_size")]))]))])
                              (Scope [(Let "in_end" (Add (Var "in_offset") (Var "in_size")))
@@ -328,17 +329,18 @@ procBalance = Proc "balance" ["address"] "balance" (Scope
               ,(Mstore (Lit traceOffset) (Var "trace_size"))])
 
 -- Output format:
--- [trace_size] ++ trace ++ returndata
+-- [1, trace_size] ++ trace ++ returndata
 procDone = Proc "done" ["success", "offset", "size"] "_" (Scope
            [(Assign "offset" (Add (Var "offset") (Mload (Lit 0x00))))
-           ,(Assign "size" (Add (Var "size") (Mload (Lit 0x00))))
+           --,(Assign "size" (Add (Var "size") (Mload (Lit 0x00))))
            ,(Let "trace_size_plus" (Add (Mload (Lit traceOffset)) (Lit 0x20)))
            ,(Assign "_" (ProcCall "memcpy" [(Add (Lit traceOffset) (Var "trace_size_plus"))
                                            ,(Var "offset")
                                            ,(Var "size")]))
+           ,(Mstore (Lit $ traceOffset - 0x20) (Lit 1))
            ,(IfElse (Var "success")
-                 (Scope [(Return (Lit traceOffset) (Add (Var "trace_size_plus") (Var "size")))])
-                 (Scope [(Revert (Lit traceOffset) (Add (Var "trace_size_plus") (Var "size")))]))])
+                 (Scope [(Return (Lit $ traceOffset - 0x20) (M.add3 (Lit 0x20) (Var "trace_size_plus") (Var "size")))])
+                 (Scope [(Revert (Lit $ traceOffset - 0x20) (M.add3 (Lit 0x20) (Var "trace_size_plus") (Var "size")))]))])
 
 procUnknownJumpdest = Proc "unknownJumpdest" [] "_" (Scope
                       [(Assign "_" (Lit 314159265358979)), (Assign "_" (ProcCall "done" [Lit 0, Lit 0, Lit 0]))])
