@@ -77,7 +77,7 @@ memcpyPrecompProgCompiled = compileAndLower [procMemcpyPrecomp] (memcpyProg "mem
 
 memcpyNoaliasProgCompiled = compileAndLower [procMemcpyNoalias] (memcpyProg "memcpyNoalias")
 
-minProg = Scope [(Mstore (Lit 0x1337) (ProcCall "min" [(Calldataload (Lit 0x00)), ((Calldataload (Lit 0x20)))]))
+minProg = Scope [(Mstore (Lit 0x1337) (min_ (Calldataload (Lit 0x00)) ((Calldataload (Lit 0x20)))))
                 ,(Return (Lit 0x1337) (Lit 0x20))]
 
 minProgCompiled = compileAndLower [procMin] minProg

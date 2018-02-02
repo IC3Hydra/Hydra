@@ -53,3 +53,8 @@ procMemcpyNoalias = Proc "memcpyNoalias" ["dst", "src", "size"] "_" (Scope
                                 ,(Assign "dst" (Add (Var "dst") (Lit 0x1)))
                                 ,(Assign "src" (Add (Var "src") (Lit 0x1)))])])
 
+min_ e1 e2 = (ProcCall "min" [e1, e2])
+procMin = Proc "min" ["a", "b"] "m" (Scope
+          [(IfElse (Lt (Var "a") (Var "b"))
+               (Scope [(Assign "m" (Var "a"))])
+               (Scope [(Assign "m" (Var "b"))]))])

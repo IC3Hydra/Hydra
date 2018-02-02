@@ -269,7 +269,7 @@ procCall = Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offse
                                                  -- returnvalue
                                                  ,(Let "returndata_start" (Add (Var "call_trace_size") (Lit 0x40)))
                                                  ,(Let "returndata_size" (Sub Returndatasize (Var "returndata_start")))
-                                                 ,(Returndatacopy (Var "out_offset") (Var "returndata_start") (ProcCall "min" [(Var "out_size"), (Var "returndata_size")]))]))])
+                                                 ,(Returndatacopy (Var "out_offset") (Var "returndata_start") (min_ (Var "out_size") (Var "returndata_size")))]))])
                              (Scope [(Let "in_end" (Add (Var "in_offset") (Var "in_size")))
                                     -- backup three words following input
                                     ,(memcpyNoalias (Lit backupOffset)
@@ -309,7 +309,7 @@ procCall = Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offse
                                                     (Lit backupOffset)
                                                     (Lit 0x60))
                                     -- output result
-                                   ,(Returndatacopy (Var "out_offset") (Lit 0x20) (ProcCall "min" [(Var "out_size"), (Sub Returndatasize (Lit 0x20))]))]))]))])
+                                   ,(Returndatacopy (Var "out_offset") (Lit 0x20) (min_ (Var "out_size") (Sub Returndatasize (Lit 0x20))))]))]))])
 
 procBalance = Proc "balance" ["address"] "balance" (Scope
               [(Let "trace_size" (Mload (Lit traceOffset)))
@@ -349,8 +349,3 @@ procUnknownJumpdest = Proc "unknownJumpdest" [] "_" (Scope
                       [(Discard (Lit 314159265358979)), (Discard (ProcCall "done" [Lit 0, Lit 0, Lit 0]))])
 
 procMc mc = Proc "mc" [] "address" (Scope [(Assign "address" (Lit mc))])
-
-procMin = Proc "min" ["a", "b"] "m" (Scope
-          [(IfElse (Lt (Var "a") (Var "b"))
-               (Scope [(Assign "m" (Var "a"))])
-               (Scope [(Assign "m" (Var "b"))]))])
