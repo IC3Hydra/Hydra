@@ -110,6 +110,23 @@ contract EquivalenceHead1 {
         }
     }
 
+    function testMemory() {
+        assembly {
+            // TODO(lorenzb): Fix failing test
+            stop
+            log2(0, 0, msize, 1337)
+            mstore(0, 1)
+            log2(0, 32, msize, 1337)
+            log2(0, 128, msize, 1337)
+            log3(0, 128, msize, 1337, 1)
+            log4(0, 128, msize, 1337, 1, 2)
+            log4(0, 128, msize, 1337, 1, 2)
+            mstore(0, add(mload(0), mload(1)))
+            log2(0, 128, msize, 1337)
+        }
+    }
+
+    // TODO(lorenzb): Test for super large parameters to various opcodes
 
     function testExternalCalls(address distort) {
         assembly {
