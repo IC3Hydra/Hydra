@@ -60,3 +60,13 @@ procMin = Proc "min" ["a", "b"] "m" (Scope
           [(IfElse (Lt (Var "a") (Var "b"))
                (Scope [(Assign "m" (Var "a"))])
                (Scope [(Assign "m" (Var "b"))]))])
+
+callHead e1 e2 e3 e4 e5 e6 e7 = ProcCall "callHead" [e1,e2,e3,e4,e5,e6,e7]
+procCallHead = Proc "callHead" ["gas", "to", "value", "in_offset", "in_size", "out_offset", "out_size"] "success" (Scope
+               [(Assign "success" (Call (Var "gas") (Var "to") (Var "value") (Var "in_offset") (Var "in_size") (Var "out_offset") (Var "out_size")))
+               -- propagate OOG, disagreement, and instrumentation errors
+               ,(M.if_ (Iszero (Var "success"))
+                     (Scope [(Let "first_word" (returndataload (Lit 0x00)))
+                            ,(M.if_ (Eq (Var "first_word") (Lit 0xd15a9)) (revertWord 0xd15a9))
+                            ,(M.if_ (M.leq Returndatasize (Lit 0x20)) (Scope [(Revert (Lit 0x00) (Lit 0x00))]))]))
+               ,(checkOrErr errorWrongOutputFormat (Eq (returndataload (Lit 0x00)) (Lit 1)))])

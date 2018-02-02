@@ -157,6 +157,7 @@ procs mc = [ procMemcpyPrecomp
            , procMc mc
            , procUnknownJumpdest
            , procReturndataload
+           , procCallHead
            ]
 
 memoryStashSize = 0x20 * 200
@@ -293,17 +294,14 @@ procCall = let regularCall = Scope
                        ,(IfElse (Eq (Var "to") (ProcCall "mc" []))
                              (Scope [(IfElse (Gt (Var "value") (Balance (ProcCall "mc" [])))
                                           (Scope [(Assign "success" (Lit 0))])
-                                          (Scope [(Nest (Scope[(memcpyNoalias (Lit backupOffset) (Sub (Var "in_offset") (Lit 0x60)) (Lit 0x60))
-                                                              ,(Mstore (Sub (Var "in_offset") (Lit 0x60)) (ProcCall "mc" []))
-                                                              ,(Mstore (Sub (Var "in_offset") (Lit 0x40)) (Var "value"))
-                                                              ,(Mstore (Sub (Var "in_offset") (Lit 0x20)) (Var "in_size"))
-                                                              ,(Assign "success" (Call Gas Address (Lit 0) (Sub (Var "in_offset") (Lit 0x60)) (Add (Var "in_size") (Lit 0x60)) (Lit 0x00) (Lit 0x00)))
-                                                              -- TODO(lorenzb): This makes OOG unrecoverable in the caller. Problem?
-                                                              ,(assert (M.leq (Lit 0x40) Returndatasize))
-                                                              -- Restore backup
-                                                              ,(memcpyNoalias (Sub (Var "in_offset") (Lit 0x60)) (Lit backupOffset) (Lit 0x60))]))
+                                          (Scope [(memcpyNoalias (Lit backupOffset) (Sub (Var "in_offset") (Lit 0x60)) (Lit 0x60))
+                                                 ,(Mstore (Sub (Var "in_offset") (Lit 0x60)) (ProcCall "mc" []))
+                                                 ,(Mstore (Sub (Var "in_offset") (Lit 0x40)) (Var "value"))
+                                                 ,(Mstore (Sub (Var "in_offset") (Lit 0x20)) (Var "in_size"))
+                                                 ,(Assign "success" (callHead Gas Address (Lit 0) (Sub (Var "in_offset") (Lit 0x60)) (Add (Var "in_size") (Lit 0x60)) (Lit 0x00) (Lit 0x00)))
+                                                 -- Restore backup
+                                                 ,(memcpyNoalias (Sub (Var "in_offset") (Lit 0x60)) (Lit backupOffset) (Lit 0x60))
                                                  -- Append trace
-                                                 ,(assert (Eq (returndataload (Lit 0x00)) (Lit 1)))
                                                  ,(Let "call_trace_size" (returndataload (Lit 0x20)))
                                                  ,(Returndatacopy (Var "record_ptr") (Lit 0x40) (Var "call_trace_size"))
                                                  ,(Assign "record_ptr" (Add (Var "record_ptr") (Var "call_trace_size")))
