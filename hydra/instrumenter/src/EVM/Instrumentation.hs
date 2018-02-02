@@ -13,7 +13,7 @@ import           Data.Maybe
 import           Data.Word
 import           EVM.Bytecode     (Opcode (..), assemble, opcodeSize)
 import           EVM.BytecodePlus (OpcodePlus (..), lift, lower)
-import           EVM.Instrumentation.Internal
+import           EVM.Instrumentation.HeadOne
 import           EVM.While
 import qualified EVM.While.Macros as M
 import           Prelude          hiding (EQ, GT, LT)

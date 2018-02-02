@@ -1,4 +1,4 @@
-module EVM.Instrumentation.Internal
+module EVM.Instrumentation.HeadOne
 where
 
 import           Data.List

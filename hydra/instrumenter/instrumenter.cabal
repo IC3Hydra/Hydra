@@ -18,7 +18,7 @@ library
                      , EVM.GenericInitcode
                      , EVM.Instrumentation
                      , EVM.Instrumentation.Common
-                     , EVM.Instrumentation.Internal
+                     , EVM.Instrumentation.HeadOne
                      , EVM.Instrumentation.Metacontract
                      , EVM.While
   other-modules:       EVM.While.Macros
