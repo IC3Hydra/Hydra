@@ -31,13 +31,11 @@ instrument mc contract =
     do let ps = procs mc
        let cps = concatMap compProc ps
        showError . checkInstrumentable $ contract
-       let (contract', pcs2tags) = lift contract
+       let (contract', pcs2tags) = lift (contract ++ [STOP])
        let jt = jumptable pcs2tags
        let contract'' = instrumentOps mc contract'
        let contract''' = [ProcedureCall $ procTag "init"]
                          ++ contract''
-                         -- TODO(lorenzb): This STOP is wrong
-                         ++ [Op STOP]
                          ++ cps
                          ++ jt
        lower contract'''
