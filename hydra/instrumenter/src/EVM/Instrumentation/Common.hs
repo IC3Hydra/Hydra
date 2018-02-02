@@ -70,3 +70,6 @@ procCallHead = Proc "callHead" ["gas", "to", "value", "in_offset", "in_size", "o
                             ,(M.if_ (Eq (Var "first_word") (Lit 0xd15a9)) (revertWord 0xd15a9))
                             ,(M.if_ (M.leq Returndatasize (Lit 0x20)) (Scope [(Revert (Lit 0x00) (Lit 0x00))]))]))
                ,(checkOrErr errorWrongOutputFormat (Eq (returndataload (Lit 0x00)) (Lit 1)))])
+
+
+procMc mc = Proc "mc" [] "address" (Scope [(Assign "address" (Lit mc))])

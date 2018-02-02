@@ -351,5 +351,3 @@ procDone = Proc "done" ["success", "offset", "size"] "_" (Scope
 
 procUnknownJumpdest = Proc "unknownJumpdest" [] "_" (Scope
                       [(Discard (Lit 314159265358979)), (Discard (ProcCall "done" [Lit 0, Lit 0, Lit 0]))])
-
-procMc mc = Proc "mc" [] "address" (Scope [(Assign "address" (Lit mc))])
