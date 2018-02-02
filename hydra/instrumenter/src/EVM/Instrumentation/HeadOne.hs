@@ -34,6 +34,7 @@ instrumentOps mc = concatMap aux
           aux (Op CALLVALUE)    = [ Push 0x20       -- ⤳ S [N "0x20"]
                                   , Op $ CALLDATALOAD    -- ⤳ S [N "calldata[0x20]"]
                                   ]
+          -- TODO(lorenzb): CALLDATALOAD, CALLDATASIZE, CALLDATACOPY are vulnerable to overflow
           aux (Op CALLDATALOAD) = [ Push 0x60 -- ⤳ S [N "calldata stash size", V "offset"]
                                   , Op $ ADD                     -- ⤳ S [N "offset + calldata stash size"]
                                   , Op $ CALLDATALOAD            -- ⤳ S [N "C[offset + calldata stash size]"]
@@ -46,6 +47,7 @@ instrumentOps mc = concatMap aux
           aux (Op CALLDATACOPY) = [ ProcedureCall $ procTag "calldatacopy"
                                   , Op $ POP
                                   ]
+          -- TODO(lorenzb): All ops that offset memory are vulnerable to overflow (MLOAD, MSTORE, MSTORE8, CALLDATALOAD, ...)
           aux (Op MLOAD)        = [ Push 0x00
                                   -- [0, offset]
                                   , Op $ MLOAD
