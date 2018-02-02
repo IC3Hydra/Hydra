@@ -237,6 +237,11 @@ procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", 
 
 procCall = let regularCall = Scope 
                  [(Let "in_end" (Add (Var "in_offset") (Var "in_size")))
+                 -- compute sha3(sha3(input) ++ [to, value]) for trace
+                 ,(Mstore (Lit $ backupOffset + 0x00) (Sha3 (Var "in_offset") (Var "in_size")))
+                 ,(Mstore (Lit $ backupOffset + 0x20) (Var "to"))
+                 ,(Mstore (Lit $ backupOffset + 0x40) (Var "value"))
+                 ,(Let "tracehash" (Sha3 (Lit backupOffset) (Lit 0x60)))
                  -- backup three words following input
                  ,(memcpyNoalias (Lit backupOffset)
                                  (Var "in_end")
@@ -253,8 +258,8 @@ procCall = let regularCall = Scope
                  -- store event type in trace
                  ,(Mstore (Var "record_ptr") (Lit 5))
                  ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
-                 -- store sha3(input ++ [to, value]) in trace
-                 ,(Mstore (Var "record_ptr") (Sha3 (Var "in_offset") (Add (Var "in_size") (Lit 0x40))))
+                 -- store hash in trace
+                 ,(Mstore (Var "record_ptr") (Var "tracehash"))
                  ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
                  -- store success in trace and assign return value
                  ,(Returndatacopy (Var "record_ptr") (Lit 0x00) (Lit 0x20))
