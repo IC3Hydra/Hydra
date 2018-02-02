@@ -82,7 +82,8 @@ Record format:
 - `BALANCE`: `[6, address, balance(address)]`
 
 Due to the unclear semantics of advancing the trace inside a FAILing callframe, we forbid this behaviour for now.
-TODO(lorenzb): Actually implement the corresponding asserts
+TODO(lorenzb): Actually implement the corresponding asserts (done for HeadN, not for HeadOne)
+
 
 ## Other head
 

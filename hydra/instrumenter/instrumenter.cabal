@@ -19,6 +19,7 @@ library
                      , EVM.Instrumentation
                      , EVM.Instrumentation.Common
                      , EVM.Instrumentation.HeadOne
+                     , EVM.Instrumentation.HeadN
                      , EVM.Instrumentation.Metacontract
                      , EVM.While
   other-modules:       EVM.While.Macros

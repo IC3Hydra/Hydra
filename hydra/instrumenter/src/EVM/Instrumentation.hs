@@ -13,7 +13,8 @@ import           Data.Maybe
 import           Data.Word
 import           EVM.Bytecode     (Opcode (..), assemble, opcodeSize)
 import           EVM.BytecodePlus (OpcodePlus (..), lift, lower)
-import           EVM.Instrumentation.HeadOne
+import qualified EVM.Instrumentation.HeadOne as HO
+import qualified EVM.Instrumentation.HeadN as HN
 import           EVM.While
 import qualified EVM.While.Macros as M
 import           Prelude          hiding (EQ, GT, LT)
@@ -21,13 +22,13 @@ import           Text.Printf
 import           Util
 
 instrumentFirst :: Integer -> [Opcode] -> Either String [Opcode]
-instrumentFirst mc contract = instrument mc contract
+instrumentFirst mc contract = instrument HO.instrumentOps HO.procs mc contract
 
 instrumentNth :: Integer -> [Opcode] -> Either String [Opcode]
-instrumentNth mcaddr parsed = Left "not implemented"
+instrumentNth mc contract = instrument HN.instrumentOps HN.procs mc contract
 
-instrument :: Integer -> [Opcode] -> Either String [Opcode]
-instrument mc contract =
+instrument :: (Integer -> [OpcodePlus] -> [OpcodePlus]) -> (Integer -> [Proc]) -> Integer -> [Opcode] -> Either String [Opcode]
+instrument instrumentOps procs mc contract =
     do let ps = procs mc
        let cps = concatMap compProc ps
        showError . checkInstrumentable $ contract

@@ -60,6 +60,7 @@ contract EquivalenceHead1 {
             success := call(gas, distort, 0, 50, 100, 200, 100)
             jumpi(pc, iszero(success))
             log1(0, 400, 1337)
+
             success := call(gas, distort, 0, 100, 100, 90, 120)
             jumpi(pc, iszero(success))
             log1(0, 400, 1337)

@@ -127,7 +127,8 @@ procInner = Proc "inner" [] "_" (Scope
                          ,(M.if_ (Iszero (M.and3 (Eq (Var "success1") (Var "success"))
                                                  (Eq (Var "trace_size") (returndataload (Lit 0x20)))
                                                  (Eq (Var "returndata_hash") (Sha3 (Var "returndata_offset") (Var "returndata_size")))))
-                               (revertWord 0xd15a9))]))
+                               (revertWord 0xd15a9))
+                         ,(M.inc "head_index" (Lit 1))]))
             ,(Mstore (Sub (Var "returndata_offset") (Lit 0x20)) (Var "success1"))
             ,(Return (Sub (Var "returndata_offset") (Lit 0x20)) (Add (Var "returndata_size") (Lit 0x20)))])
 

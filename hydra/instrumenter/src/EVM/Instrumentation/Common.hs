@@ -17,6 +17,9 @@ errorHeadIndexTooLarge = 0x1337c0ffee00000004
 errorInputTooSmall = 0x1337c0ffee00000005
 errorWrongOutputFormat = 0x1337c0ffee00000006
 errorWrongInputFormat = 0x1337c0ffee00000007
+errorFailedSelfCallInteracted = 0x1337c0ffee00000008
+errorPrecompileCalledWithNonzeroValue = 0x1337c0ffee00000009
+
 -- crash code = revertWord code
 --assert e = (M.if_ (Iszero e) (crash errorAssert))
 --oog = Revert (Lit 0) (Lit 0)

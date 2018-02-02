@@ -223,7 +223,8 @@ procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", 
           ,(Mstore (Var "record_ptr") (Var "num_topics"))
           ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
           -- store sha3(logdata ++ topics) in trace
-          ,(Mstore (Var "record_ptr") (Sha3 (Var "in_offset") (Add (Var "in_size") (Mul (Var "num_topics") (Lit 0x20)))))
+          ,(Mstore (Var "record_ptr") (Sha3 (Var "in_offset")
+                                      (Add (Var "in_size") (Mul (Var "num_topics") (Lit 0x20)))))
           ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
           -- update trace length
           ,(Assign "trace_size" (Add (Var "trace_size") (Sub (Var "record_ptr") (Var "record_start"))))
