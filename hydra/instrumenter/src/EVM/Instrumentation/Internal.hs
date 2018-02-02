@@ -173,10 +173,11 @@ assert e = M.if_ (Iszero e) (Scope [Revert (Lit 0x00) (Lit 0x00)])
 callMc e1 e2 e3 e4 = (Call Gas (ProcCall "mc" []) (Lit 0) e1 e2 e3 e4)
 
 procInit = Proc "init" [] "_" (Scope
-           [(IfElse (M.and3 (Or (Eq Caller (ProcCall "mc" [])) (Eq Caller Address)) (Iszero Callvalue) (Gt Calldatasize (Lit (0x40-1))))
-                (Scope [(Mstore (Lit 0x00) (Lit memoryStashSize))
-                       ,(Mstore (Lit (memoryStashSize - 0x20)) (Lit 1))])
-                (Scope [(M.boom)]))])
+           [(checkOrDie (M.and3 (Or (Eq Caller (ProcCall "mc" [])) (Eq Caller Address))
+                                (Iszero Callvalue)
+                                (Gt Calldatasize (Lit (0x40-1)))))
+           ,(Mstore (Lit 0x00) (Lit memoryStashSize))
+           ,(Mstore (Lit (memoryStashSize - 0x20)) (Lit 1))])
 
 procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "_" (Scope
                    [(Discard (Lit 314159265358979)),(Calldatacopy (Add (Var "dst") (Mload (Lit 0x00))) (Add (Var "src") (Lit 0x40)) (Var "size"))])

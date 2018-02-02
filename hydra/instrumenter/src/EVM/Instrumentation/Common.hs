@@ -26,7 +26,7 @@ checkOrErr w e =  (M.if_ (Iszero e)
                        (Scope [(Mstore (Lit 0x00) (Lit w))
                               ,(Revert (Lit 0x00) (Lit 0x20))]))
 
-checkOrDie e = (M.if_ (Iszero e) (Scope [(Revert (Lit 0x00) (Lit 0x00))]))
+checkOrDie e = (M.if_ (Iszero e) (Scope [(M.die)]))
 
 returndataload e = (ProcCall "returndataload" [e])
 procReturndataload = Proc "returndataload" ["offset"] "data" (Scope
@@ -38,9 +38,7 @@ procReturndataload = Proc "returndataload" ["offset"] "data" (Scope
 
 memcpyPrecomp e1 e2 e3 = (Discard (ProcCall "memcpyPrecomp" [e1, e2, e3]))
 procMemcpyPrecomp = Proc "memcpyPrecomp" ["dst", "src", "size"] "_" (Scope
-                    [(IfElse (Call Gas (Lit 0x4) (Lit 0) (Var "src") (Var "size") (Var "dst") (Var "size"))
-                          (Scope [])
-                          (Scope [(M.boom)]))])
+                    [(checkOrDie (Call Gas (Lit 0x4) (Lit 0) (Var "src") (Var "size") (Var "dst") (Var "size")))])
 
 memcpyNoalias e1 e2 e3 = (Discard (ProcCall "memcpyNoalias" [e1, e2, e3]))
 procMemcpyNoalias = Proc "memcpyNoalias" ["dst", "src", "size"] "_" (Scope
