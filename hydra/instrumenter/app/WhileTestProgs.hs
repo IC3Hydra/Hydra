@@ -32,7 +32,7 @@ ownAddress = Proc "ownAddress" [] "address" (Scope [(Let "address2" Address)
                                                    ,(Assign "address" (Var "address2"))])
 
 selfCallProg = Scope [IfElse (Iszero (Eq (ProcCall "ownAddress" []) Caller))
-                          (Scope [(Let "_" (Call Gas Address (Lit 0) (Lit 0x0) (Lit 0x0) (Lit 0x0) (Lit 0x40)))
+                          (Scope [(Discard (Call Gas Address (Lit 0) (Lit 0x0) (Lit 0x0) (Lit 0x0) (Lit 0x40)))
                                  ,(Return (Lit 0x20) (Lit 0x20))])
                           (Scope [(Let "output" (Lit 0x1337133713371337133713371337133713371337133713371337133713371334))
                                  ,(Let "foo" (Lit 0))
@@ -49,27 +49,26 @@ selfCallProg = Scope [IfElse (Iszero (Eq (ProcCall "ownAddress" []) Caller))
 selfCallProgCompiled = compileAndLower [ownAddress] selfCallProg
 
 memcpyProg name = Scope [(Mstore (Lit 0x0) (Lit 0xe7))
-                   ,(Let "_" (Lit 0))
                    -- 00000000000000000000000000000000000000000000000000000000000000e7
-                   ,(Assign "_" (ProcCall name [(Lit 0x1e), (Lit 0x1f), (Lit 1)]))
+                   ,(Discard (ProcCall name [(Lit 0x1e), (Lit 0x1f), (Lit 1)]))
                    -- 000000000000000000000000000000000000000000000000000000000000e7e7
-                   ,(Assign "_" (ProcCall name [(Lit 0x1c), (Lit 0x1e), (Lit 2)]))
+                   ,(Discard (ProcCall name [(Lit 0x1c), (Lit 0x1e), (Lit 2)]))
                    -- 00000000000000000000000000000000000000000000000000000000e7e7e7e7
-                   ,(Assign "_" (ProcCall name [(Lit 0x18), (Lit 0x1c), (Lit 4)]))
+                   ,(Discard (ProcCall name [(Lit 0x18), (Lit 0x1c), (Lit 4)]))
                    -- 000000000000000000000000000000000000000000000000e7e7e7e7e7e7e7e7
-                   ,(Assign "_" (ProcCall name [(Lit 0x10), (Lit 0x18), (Lit 8)]))
+                   ,(Discard (ProcCall name [(Lit 0x10), (Lit 0x18), (Lit 8)]))
                    -- 00000000000000000000000000000000e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7
-                   ,(Assign "_" (ProcCall name [(Lit 0x10), (Lit 0x18), (Lit 8)]))
+                   ,(Discard (ProcCall name [(Lit 0x10), (Lit 0x18), (Lit 8)]))
                    -- 00000000000000000000000000000000e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7
-                   ,(Assign "_" (ProcCall name [(Lit 0x20), (Lit 0x00), (Lit 0x20)]))
+                   ,(Discard (ProcCall name [(Lit 0x20), (Lit 0x00), (Lit 0x20)]))
                    -- 00000000000000000000000000000000e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e700000000000000000000000000000000e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7
-                   ,(Assign "_" (ProcCall name [(Lit 0x00), (Lit 0x10), (Lit 0x20)]))
+                   ,(Discard (ProcCall name [(Lit 0x00), (Lit 0x10), (Lit 0x20)]))
                    -- e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e70000000000000000000000000000000000000000000000000000000000000000e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7
-                   ,(Assign "_" (ProcCall name [(Lit 0x00), (Lit 0x10), (Lit 0x00)]))
+                   ,(Discard (ProcCall name [(Lit 0x00), (Lit 0x10), (Lit 0x00)]))
                    -- e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e70000000000000000000000000000000000000000000000000000000000000000e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7
                    ,(Mstore8 (Lit 0x1f) (Byte (Lit 31) Msize))
                    -- e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e70000000000000000000000000000004000000000000000000000000000000000e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7
-                   ,(Assign "_" (ProcCall name [(Lit 0x21), (Lit 0x00), (Lit 0x21)]))
+                   ,(Discard (ProcCall name [(Lit 0x21), (Lit 0x00), (Lit 0x21)]))
                    -- e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e70000000000000000000000000000004000e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e70000000000000000000000000000004000
                    ,(Return (Lit 0x00) (Lit 0x60))]
 

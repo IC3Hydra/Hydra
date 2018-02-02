@@ -176,14 +176,13 @@ procOuter = Proc "outer" [] "_" (Scope
                         ,(checkOrDie (Eq (Mload (Lit 0x00)) (Lit disagreement)))
                          -- Set state to bountyPaid and try to pay bounty
                         ,(Sstore (Lit slocOuterState) (Lit outerStateBountyPaid))
-                        ,(Assign "_" (ProcCall "payBounty" []))]))])
+                        ,(Discard (ProcCall "payBounty" []))]))])
 
-mc = Scope [(Let "_" (Lit 0))
-           ,(Let "head_address" (ProcCall "headAddress" [(Lit 0)]))
+mc = Scope [(Let "head_address" (ProcCall "headAddress" [(Lit 0)]))
            ,(IfElse (Eq Caller (Var "head_address"))
-                 (Scope [Assign "_" (ProcCall "callback" [])])
+                 (Scope [Discard (ProcCall "callback" [])])
                  (Scope [(IfElse (Eq Caller Address)
-                              (Scope [(Assign "_" (ProcCall "inner" []))])
-                              (Scope [(Assign "_" (ProcCall "outer" []))]))]))]
+                              (Scope [(Discard (ProcCall "inner" []))])
+                              (Scope [(Discard (ProcCall "outer" []))]))]))]
 --           ,(if_ (Eq (Lit mutexOn) (Sload slocMutex)) (Scope (crash errorReentrancy)))
 --           ,(Sstore (Lit slocMutex) (Lit mutexOn))

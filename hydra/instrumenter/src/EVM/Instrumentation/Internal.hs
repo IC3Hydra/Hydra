@@ -179,22 +179,22 @@ procInit = Proc "init" [] "_" (Scope
                 (Scope [(M.boom)]))])
 
 procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "_" (Scope
-                   [(Assign "_" (Lit 314159265358979)),(Calldatacopy (Add (Var "dst") (Mload (Lit 0x00))) (Add (Var "src") (Lit 0x40)) (Var "size"))])
+                   [(Discard (Lit 314159265358979)),(Calldatacopy (Add (Var "dst") (Mload (Lit 0x00))) (Add (Var "src") (Lit 0x40)) (Var "size"))])
 
 procLog0 = Proc "log0" ["in_offset", "in_size"] "_" (Scope
-           [Assign "_" (ProcCall "log" [(Lit 0), (Var "in_offset"), (Var "in_size"), (Lit 0), (Lit 0), (Lit 0), (Lit 0)])])
+           [Discard (ProcCall "log" [(Lit 0), (Var "in_offset"), (Var "in_size"), (Lit 0), (Lit 0), (Lit 0), (Lit 0)])])
 
 procLog1 = Proc "log1" ["in_offset", "in_size", "topic1"] "_" (Scope
-           [Assign "_" (ProcCall "log" [(Lit 1), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Lit 0), (Lit 0), (Lit 0)])])
+           [Discard (ProcCall "log" [(Lit 1), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Lit 0), (Lit 0), (Lit 0)])])
 
 procLog2 = Proc "log2" ["in_offset", "in_size", "topic1", "topic2"] "_" (Scope
-           [Assign "_" (ProcCall "log" [(Lit 2), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Var "topic2"), (Lit 0), (Lit 0)])])
+           [Discard (ProcCall "log" [(Lit 2), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Var "topic2"), (Lit 0), (Lit 0)])])
 
 procLog3 = Proc "log3" ["in_offset", "in_size", "topic1", "topic2", "topic3"] "_" (Scope
-           [Assign "_" (ProcCall "log" [(Lit 3), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Var "topic2"), (Var "topic3"), (Lit 0)])])
+           [Discard (ProcCall "log" [(Lit 3), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Var "topic2"), (Var "topic3"), (Lit 0)])])
 
 procLog4 = Proc "log4" ["in_offset", "in_size", "topic1", "topic2", "topic3", "topic4"] "_" (Scope
-           [Assign "_" (ProcCall "log" [(Lit 4), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Var "topic2"), (Var "topic3"), (Var "topic4")])])
+           [Discard (ProcCall "log" [(Lit 4), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Var "topic2"), (Var "topic3"), (Var "topic4")])])
 
 procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", "topic3", "topic4"] "_" (Scope
            [(Assign "in_offset" (Add (Var "in_offset") (Mload (Lit 0x00))))
@@ -202,7 +202,7 @@ procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", 
            ,(Let "record_start" (Add (Var "trace_size") (Lit (traceOffset + 0x20))))
            ,(Let "record_ptr" (Var "record_start"))
            -- back up words following input
-           ,(Assign "_" (ProcCall "memcpy2" [(Lit backupOffset)
+           ,(Discard (ProcCall "memcpy2" [(Lit backupOffset)
                                             ,(Add (Var "in_offset") (Var "in_size"))
                                             ,(Mul (Add (Var "num_topics") (Lit 1)) (Lit 0x20))]))
            -- append to input: [topic1 .. topicn]
@@ -228,7 +228,7 @@ procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", 
            ,(assert (M.leq (Var "trace_size") (Lit maxTraceSize)))
            ,(Mstore (Lit traceOffset) (Var "trace_size"))
            -- restore backup
-           ,(Assign "_" (ProcCall "memcpy2" [(Add (Var "in_offset") (Var "in_size"))
+           ,(Discard (ProcCall "memcpy2" [(Add (Var "in_offset") (Var "in_size"))
                                             ,(Lit backupOffset)
                                             ,(Mul (Add (Var "num_topics") (Lit 1)) (Lit 0x20))]))])
 
@@ -245,7 +245,7 @@ procCall = Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offse
                        ,(IfElse (Eq (Var "to") (ProcCall "mc" []))
                              (Scope [(IfElse (Gt (Var "value") (Balance (ProcCall "mc" [])))
                                           (Scope [(Assign "success" (Lit 0))])
-                                          (Scope [(Nest (Scope[(Let "_" (ProcCall "memcpy2" [(Lit backupOffset), (Sub (Var "in_offset") (Lit 0x60)), (Lit 0x60)]))
+                                          (Scope [(Nest (Scope[(Discard (ProcCall "memcpy2" [(Lit backupOffset), (Sub (Var "in_offset") (Lit 0x60)), (Lit 0x60)]))
                                                               ,(Mstore (Sub (Var "in_offset") (Lit 0x60)) (ProcCall "mc" []))
                                                               ,(Mstore (Sub (Var "in_offset") (Lit 0x40)) (Var "value"))
                                                               ,(Mstore (Sub (Var "in_offset") (Lit 0x20)) (Var "in_size"))
@@ -253,7 +253,7 @@ procCall = Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offse
                                                               -- TODO(lorenzb): This makes OOG unrecoverable in the caller. Problem?
                                                               ,(assert (M.leq (Lit 0x40) Returndatasize))
                                                               -- Restore backup
-                                                              ,(Assign "_" (ProcCall "memcpy2" [(Sub (Var "in_offset") (Lit 0x60)), (Lit backupOffset), (Lit 0x60)]))]))
+                                                              ,(Discard (ProcCall "memcpy2" [(Sub (Var "in_offset") (Lit 0x60)), (Lit backupOffset), (Lit 0x60)]))]))
                                                  -- Append trace
                                                  ,(assert (Eq (returndataload (Lit 0x00)) (Lit 1)))
                                                  ,(Let "call_trace_size" (returndataload (Lit 0x20)))
@@ -269,7 +269,7 @@ procCall = Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offse
                                                  ,(Returndatacopy (Var "out_offset") (Var "returndata_start") (ProcCall "min" [(Var "out_size"), (Var "returndata_size")]))]))])
                              (Scope [(Let "in_end" (Add (Var "in_offset") (Var "in_size")))
                                     -- backup three words following input
-                                    ,(Let "_" (ProcCall "memcpy2" [(Lit backupOffset)
+                                    ,(Discard (ProcCall "memcpy2" [(Lit backupOffset)
                                                                   ,(Var "in_end")
                                                                   ,(Lit 0x60)]))
                                     -- append [to, value, 5] to input
@@ -302,7 +302,7 @@ procCall = Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offse
                                     ,(assert (M.leq (Var "trace_size") (Lit maxTraceSize)))
                                     ,(Mstore (Lit traceOffset) (Var "trace_size"))
                                     -- restore backup
-                                    ,(Assign "_" (ProcCall "memcpy2" [(Var "in_end")
+                                    ,(Discard (ProcCall "memcpy2" [(Var "in_end")
                                                                      ,(Lit backupOffset)
                                                                      ,(Lit 0x60)]))
                                     -- output result
@@ -334,7 +334,7 @@ procDone = Proc "done" ["success", "offset", "size"] "_" (Scope
            [(Assign "offset" (Add (Var "offset") (Mload (Lit 0x00))))
            --,(Assign "size" (Add (Var "size") (Mload (Lit 0x00))))
            ,(Let "trace_size_plus" (Add (Mload (Lit traceOffset)) (Lit 0x20)))
-           ,(Assign "_" (ProcCall "memcpy" [(Add (Lit traceOffset) (Var "trace_size_plus"))
+           ,(Discard (ProcCall "memcpy" [(Add (Lit traceOffset) (Var "trace_size_plus"))
                                            ,(Var "offset")
                                            ,(Var "size")]))
            ,(Mstore (Lit $ traceOffset - 0x20) (Lit 1))
@@ -343,7 +343,7 @@ procDone = Proc "done" ["success", "offset", "size"] "_" (Scope
                  (Scope [(Revert (Lit $ traceOffset - 0x20) (M.add3 (Lit 0x20) (Var "trace_size_plus") (Var "size")))]))])
 
 procUnknownJumpdest = Proc "unknownJumpdest" [] "_" (Scope
-                      [(Assign "_" (Lit 314159265358979)), (Assign "_" (ProcCall "done" [Lit 0, Lit 0, Lit 0]))])
+                      [(Discard (Lit 314159265358979)), (Discard (ProcCall "done" [Lit 0, Lit 0, Lit 0]))])
 
 procMc mc = Proc "mc" [] "address" (Scope [(Assign "address" (Lit mc))])
 
