@@ -235,7 +235,49 @@ procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", 
                           (Lit backupOffset)
                           (Mul (Add (Var "num_topics") (Lit 1)) (Lit 0x20)))])
 
-procCall = Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offset", "out_size"] "success" (Scope
+procCall = let regularCall = Scope 
+                 [(Let "in_end" (Add (Var "in_offset") (Var "in_size")))
+                 -- backup three words following input
+                 ,(memcpyNoalias (Lit backupOffset)
+                                 (Var "in_end")
+                                 (Lit 0x60))
+                 -- append [to, value, 5] to input
+                 ,(Mstore (Add (Var "in_end") (Lit 0x00)) (Var "to"))
+                 ,(Mstore (Add (Var "in_end") (Lit 0x20)) (Var "value"))
+                 ,(Mstore (Add (Var "in_end") (Lit 0x40)) (Lit 5) {- 5 is code for CALL-})
+                 -- Call MC
+                 -- Input format: input ++ [to, value, 5]
+                 -- Output format: [success] ++ output
+                 ,(assert (callMc (Var "in_offset") (Add (Var "in_size") (Lit 0x60)) (Lit 0x00) (Lit 0x00)))
+                 ,(assert (M.leq (Lit 0x20) Returndatasize))
+                 -- store event type in trace
+                 ,(Mstore (Var "record_ptr") (Lit 5))
+                 ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
+                 -- store sha3(input ++ [to, value]) in trace
+                 ,(Mstore (Var "record_ptr") (Sha3 (Var "in_offset") (Add (Var "in_size") (Lit 0x40))))
+                 ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
+                 -- store success in trace and assign return value
+                 ,(Returndatacopy (Var "record_ptr") (Lit 0x00) (Lit 0x20))
+                 ,(Assign "success" (Mload (Var "record_ptr")))
+                 ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
+                 -- store size in trace
+                 ,(Mstore (Var "record_ptr") (Sub Returndatasize (Lit 0x20)))
+                 ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
+                 -- store output in trace
+                 ,(Returndatacopy (Var "record_ptr") (Lit 0x20) (Sub Returndatasize (Lit 0x20)))
+                 ,(Assign "record_ptr" (Add (Var "record_ptr") (Sub Returndatasize (Lit 0x20))))
+                 -- update trace length
+                 ,(Assign "trace_size" (Add (Var "trace_size") (Sub (Var "record_ptr") (Var "record_start"))))
+                 ,(assert (M.leq (Var "trace_size") (Lit maxTraceSize)))
+                 ,(Mstore (Lit traceOffset) (Var "trace_size"))
+                 -- restore backup
+                 ,(memcpyNoalias (Var "in_end")
+                                 (Lit backupOffset)
+                                 (Lit 0x60))
+                 -- output result
+                 ,(Returndatacopy (Var "out_offset") (Lit 0x20) (min_ (Var "out_size") (Sub Returndatasize (Lit 0x20))))
+                 ] in
+           Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offset", "out_size"] "success" (Scope
            [(Assign "in_offset" (Add (Var "in_offset") (Mload (Lit 0x00))))
            ,(Assign "out_offset" (Add (Var "out_offset") (Mload (Lit 0x00))))
            ,(IfElse (And (Lt (Lit 0) (Var "to")) (M.leq (Var "to") (Lit maxPrecompileAddress)))
@@ -270,46 +312,7 @@ procCall = Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offse
                                                  ,(Let "returndata_start" (Add (Var "call_trace_size") (Lit 0x40)))
                                                  ,(Let "returndata_size" (Sub Returndatasize (Var "returndata_start")))
                                                  ,(Returndatacopy (Var "out_offset") (Var "returndata_start") (min_ (Var "out_size") (Var "returndata_size")))]))])
-                             (Scope [(Let "in_end" (Add (Var "in_offset") (Var "in_size")))
-                                    -- backup three words following input
-                                    ,(memcpyNoalias (Lit backupOffset)
-                                                    (Var "in_end")
-                                                    (Lit 0x60))
-                                    -- append [to, value, 5] to input
-                                    ,(Mstore (Add (Var "in_end") (Lit 0x00)) (Var "to"))
-                                    ,(Mstore (Add (Var "in_end") (Lit 0x20)) (Var "value"))
-                                    ,(Mstore (Add (Var "in_end") (Lit 0x40)) (Lit 5) {- 5 is code for CALL-})
-                                    -- Call MC
-                                    -- Input format: input ++ [to, value, 5]
-                                    -- Output format: [success] ++ output
-                                    ,(assert (callMc (Var "in_offset") (Add (Var "in_size") (Lit 0x60)) (Lit 0x00) (Lit 0x00)))
-                                    ,(assert (M.leq (Lit 0x20) Returndatasize))
-                                    -- store event type in trace
-                                    ,(Mstore (Var "record_ptr") (Lit 5))
-                                    ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
-                                    -- store sha3(input ++ [to, value]) in trace
-                                    ,(Mstore (Var "record_ptr") (Sha3 (Var "in_offset") (Add (Var "in_size") (Lit 0x40))))
-                                    ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
-                                    -- store success in trace and assign return value
-                                    ,(Returndatacopy (Var "record_ptr") (Lit 0x00) (Lit 0x20))
-                                    ,(Assign "success" (Mload (Var "record_ptr")))
-                                    ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
-                                    -- store size in trace
-                                    ,(Mstore (Var "record_ptr") (Sub Returndatasize (Lit 0x20)))
-                                    ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
-                                    -- store output in trace
-                                    ,(Returndatacopy (Var "record_ptr") (Lit 0x20) (Sub Returndatasize (Lit 0x20)))
-                                    ,(Assign "record_ptr" (Add (Var "record_ptr") (Sub Returndatasize (Lit 0x20))))
-                                    -- update trace length
-                                    ,(Assign "trace_size" (Add (Var "trace_size") (Sub (Var "record_ptr") (Var "record_start"))))
-                                    ,(assert (M.leq (Var "trace_size") (Lit maxTraceSize)))
-                                    ,(Mstore (Lit traceOffset) (Var "trace_size"))
-                                    -- restore backup
-                                    ,(memcpyNoalias (Var "in_end")
-                                                    (Lit backupOffset)
-                                                    (Lit 0x60))
-                                    -- output result
-                                   ,(Returndatacopy (Var "out_offset") (Lit 0x20) (min_ (Var "out_size") (Sub Returndatasize (Lit 0x20))))]))]))])
+                             regularCall)]))])
 
 procBalance = Proc "balance" ["address"] "balance" (Scope
               [(Let "trace_size" (Mload (Lit traceOffset)))
