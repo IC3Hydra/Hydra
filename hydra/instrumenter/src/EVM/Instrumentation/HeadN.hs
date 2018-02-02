@@ -226,21 +226,6 @@ procSha3 = Proc "sha3" ["offset", "size"] "hash" (Scope
                  (Scope [(Assign "offset" (offsetMem (Var "offset")))]))
            ,(Assign "hash" (Sha3 (Var "offset") (Var "size")))])
 
-procLog0 = Proc "log0" ["in_offset", "in_size"] "_" (Scope
-           [Discard (ProcCall "log" [(Lit 0), (Var "in_offset"), (Var "in_size"), (Lit 0), (Lit 0), (Lit 0), (Lit 0)])])
-
-procLog1 = Proc "log1" ["in_offset", "in_size", "topic1"] "_" (Scope
-           [Discard (ProcCall "log" [(Lit 1), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Lit 0), (Lit 0), (Lit 0)])])
-
-procLog2 = Proc "log2" ["in_offset", "in_size", "topic1", "topic2"] "_" (Scope
-           [Discard (ProcCall "log" [(Lit 2), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Var "topic2"), (Lit 0), (Lit 0)])])
-
-procLog3 = Proc "log3" ["in_offset", "in_size", "topic1", "topic2", "topic3"] "_" (Scope
-           [Discard (ProcCall "log" [(Lit 3), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Var "topic2"), (Var "topic3"), (Lit 0)])])
-
-procLog4 = Proc "log4" ["in_offset", "in_size", "topic1", "topic2", "topic3", "topic4"] "_" (Scope
-           [Discard (ProcCall "log" [(Lit 4), (Var "in_offset"), (Var "in_size"), (Var "topic1"), (Var "topic2"), (Var "topic3"), (Var "topic4")])])
-
 procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", "topic3", "topic4"] "_" (Scope
           [(M.if_ (Var "in_size")
                 (Scope [(Assign "in_offset" (offsetMem (Var "in_offset")))]))
