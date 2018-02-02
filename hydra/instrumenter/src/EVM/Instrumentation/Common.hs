@@ -27,14 +27,14 @@ checkOrErr w e =  (M.if_ (Iszero e)
                               ,(Revert (Lit 0x00) (Lit 0x20))]))
 
 checkOrDie e = (M.if_ (Iszero e) (Scope [(Revert (Lit 0x00) (Lit 0x00))]))
+
+returndataload e = (ProcCall "returndataload" [e])
 procReturndataload = Proc "returndataload" ["offset"] "data" (Scope
                      [(Let "backup" (Mload (Lit 0x00)))
                      ,(Returndatacopy (Lit 0x00) (Var "offset") (Lit 0x20))
                      ,(Assign "data" (Mload (Lit 0x00)))
                      ,(Mstore (Lit 0x00) (Var "backup"))
                      ])
-
-returndataload e = (ProcCall "returndataload" [e])
 
 memcpyPrecomp e1 e2 e3 = (Discard (ProcCall "memcpyPrecomp" [e1, e2, e3]))
 procMemcpyPrecomp = Proc "memcpyPrecomp" ["dst", "src", "size"] "_" (Scope
