@@ -78,6 +78,10 @@ procCallHead = Proc "callHead" ["gas", "to", "value", "in_offset", "in_size", "o
 
 procMc mc = Proc "mc" [] "address" (Scope [(Assign "address" (Lit mc))])
 
+procUnknownJumpdest = Proc "unknownJumpdest" [] "_" (Scope
+                      [(Discard (Lit 314159265358979)), (Discard (ProcCall "done" [Lit 0, Lit 0, Lit 0]))])
+
+
 procLog0 = Proc "log0" ["in_offset", "in_size"] "_" (Scope
            [Discard (ProcCall "log" [(Lit 0), (Var "in_offset"), (Var "in_size"), (Lit 0), (Lit 0), (Lit 0), (Lit 0)])])
 

@@ -335,6 +335,3 @@ procDone = Proc "done" ["success", "offset", "size"] "_" (Scope
            ,(IfElse (Var "success")
                  (Scope [(Return (Var "offset2") (Var "size"))])
                  (Scope [(Revert (Var "offset2") (Var "size"))]))])
-
-procUnknownJumpdest = Proc "unknownJumpdest" [] "_" (Scope
-                      [(Discard (Lit 314159265358979)), (Discard (ProcCall "done" [Lit 0, Lit 0, Lit 0]))])
