@@ -159,8 +159,6 @@ procs mc = [ procMemcpyPrecomp
            , procReturndataload
            ]
 
-maxPrecompileAddress = 32
-
 memoryStashSize = 0x20 * 200
 
 backupOffset = 0x20
@@ -235,7 +233,7 @@ procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", 
                           (Lit backupOffset)
                           (Mul (Add (Var "num_topics") (Lit 1)) (Lit 0x20)))])
 
-procCall = let regularCall = Scope 
+procCall = let regularCall = Scope
                  [(Let "in_end" (Add (Var "in_offset") (Var "in_size")))
                  -- compute sha3(sha3(input) ++ [to, value]) for trace
                  ,(Mstore (Lit $ backupOffset + 0x00) (Sha3 (Var "in_offset") (Var "in_size")))

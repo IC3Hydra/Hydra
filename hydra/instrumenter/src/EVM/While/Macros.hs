@@ -5,6 +5,8 @@ module EVM.While.Macros
 , geq
 , leq
 , die
+, inc
+, dec
 ) where
 
 import EVM.While
@@ -15,3 +17,5 @@ and3 e1 e2 e3 = (And e1 (And e2 e3))
 geq e1 e2 = (Iszero (Lt e1 e2))
 leq e1 e2 = (Iszero (Gt e1 e2))
 die = Revert (Lit 0) (Lit 0)
+inc v e = (Assign v (Add (Var v) e))
+dec v e = (Assign v (Sub (Var v) e))

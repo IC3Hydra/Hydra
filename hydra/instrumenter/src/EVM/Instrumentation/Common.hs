@@ -4,6 +4,8 @@ where
 import EVM.While
 import qualified EVM.While.Macros as M
 
+maxPrecompileAddress = 32
+
 disagreement = 0xd15a9
 revertWord w = Scope [Mstore (Lit 0x00) (Lit w)
                      ,Revert (Lit 0x00) (Lit 0x20)]
