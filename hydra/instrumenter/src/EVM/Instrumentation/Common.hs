@@ -35,3 +35,23 @@ procReturndataload = Proc "returndataload" ["offset"] "data" (Scope
                      ])
 
 returndataload e = (ProcCall "returndataload" [e])
+
+memcpyPrecomp e1 e2 e3 = (Discard (ProcCall "memcpyPrecomp" [e1, e2, e3]))
+procMemcpyPrecomp = Proc "memcpyPrecomp" ["dst", "src", "size"] "_" (Scope
+                    [(IfElse (Call Gas (Lit 0x4) (Lit 0) (Var "src") (Var "size") (Var "dst") (Var "size"))
+                          (Scope [])
+                          (Scope [(M.boom)]))])
+
+memcpyNoalias e1 e2 e3 = (Discard (ProcCall "memcpyNoalias" [e1, e2, e3]))
+procMemcpyNoalias = Proc "memcpyNoalias" ["dst", "src", "size"] "_" (Scope
+                    [While (M.geq (Var "size") (Lit 0x20))
+                         (Scope [(Mstore (Var "dst") (Mload (Var "src")))
+                                ,(Assign "size" (Sub (Var "size") (Lit 0x20)))
+                                ,(Assign "dst" (Add (Var "dst") (Lit 0x20)))
+                                ,(Assign "src" (Add (Var "src") (Lit 0x20)))])
+                    ,While (M.geq (Var "size") (Lit 0x1))
+                         (Scope [(Mstore8 (Var "dst") (Byte (Lit 0) (Mload (Var "src"))))
+                                ,(Assign "size" (Sub (Var "size") (Lit 0x1)))
+                                ,(Assign "dst" (Add (Var "dst") (Lit 0x1)))
+                                ,(Assign "src" (Add (Var "src") (Lit 0x1)))])])
+

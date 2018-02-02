@@ -56,8 +56,8 @@ class TestWhile(PyEthereumTestCase):
                                    data=b""),
                          utils.decode_hex("1337" * 16))
 
-    def test_memcpy(self):
-        byte_code = check_output(["stack", "exec", "whiletestprogs-exe", "--", "memcpy"],
+    def test_memcpyPrecomp(self):
+        byte_code = check_output(["stack", "exec", "whiletestprogs-exe", "--", "memcpyPrecomp"],
                                  cwd=self.INSTRUMENTER_PATH).strip()
 
         contract = self.s.contract(utils.decode_hex(byte_code), language='evm')
@@ -66,8 +66,8 @@ class TestWhile(PyEthereumTestCase):
                                    data=b""),
                          utils.decode_hex("e7" * 16 + "00" * 15 + "4000" + "e7" * 16 + "00" * 15 + "4000" + "00" * 30))
 
-    def test_memcpy2(self):
-        byte_code = check_output(["stack", "exec", "whiletestprogs-exe", "--", "memcpy2"],
+    def test_memcpyNoalias(self):
+        byte_code = check_output(["stack", "exec", "whiletestprogs-exe", "--", "memcpyNoalias"],
                                  cwd=self.INSTRUMENTER_PATH).strip()
 
         contract = self.s.contract(utils.decode_hex(byte_code), language='evm')

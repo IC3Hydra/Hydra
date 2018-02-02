@@ -5,6 +5,7 @@ import           Data.Char
 import qualified Data.Text           as T
 import           EVM.Bytecode
 import           EVM.GenericInitcode
+import           EVM.Instrumentation.Common
 import           EVM.Instrumentation.Internal
 import           EVM.While
 import           System.Environment
@@ -72,9 +73,9 @@ memcpyProg name = Scope [(Mstore (Lit 0x0) (Lit 0xe7))
                    -- e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e70000000000000000000000000000004000e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e70000000000000000000000000000004000
                    ,(Return (Lit 0x00) (Lit 0x60))]
 
-memcpyProgCompiled = compileAndLower [procMemcpy] (memcpyProg "memcpy")
+memcpyPrecompProgCompiled = compileAndLower [procMemcpyPrecomp] (memcpyProg "memcpyPrecomp")
 
-memcpy2ProgCompiled = compileAndLower [procMemcpy2] (memcpyProg "memcpy2")
+memcpyNoaliasProgCompiled = compileAndLower [procMemcpyNoalias] (memcpyProg "memcpyNoalias")
 
 minProg = Scope [(Mstore (Lit 0x1337) (ProcCall "min" [(Calldataload (Lit 0x00)), ((Calldataload (Lit 0x20)))]))
                 ,(Return (Lit 0x1337) (Lit 0x20))]
@@ -92,8 +93,8 @@ run args = do p <- printErrorAndExit (aux args)
               putStrLn . byteStringToHexString . assemble $ genericInitcode ++ p
     where aux ["square"]   = squareProgCompiled
           aux ["selfCall"] = selfCallProgCompiled
-          aux ["memcpy"]   = memcpyProgCompiled
-          aux ["memcpy2"]  = memcpy2ProgCompiled
+          aux ["memcpyPrecomp"]   = memcpyPrecompProgCompiled
+          aux ["memcpyNoalias"]  = memcpyNoaliasProgCompiled
           aux ["min"]      = minProgCompiled
           aux _            = Left $ unlines [ "Invalid option." ]
 

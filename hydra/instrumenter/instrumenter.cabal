@@ -17,11 +17,11 @@ library
                      , EVM.BytecodePlus
                      , EVM.GenericInitcode
                      , EVM.Instrumentation
+                     , EVM.Instrumentation.Common
                      , EVM.Instrumentation.Internal
                      , EVM.Instrumentation.Metacontract
                      , EVM.While
-  other-modules:       EVM.Instrumentation.Common
-                     , EVM.While.Macros
+  other-modules:       EVM.While.Macros
                      , Util
   build-depends:       base >= 4.7 && < 5
                      , attoparsec
