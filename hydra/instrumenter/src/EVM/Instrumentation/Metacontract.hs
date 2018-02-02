@@ -17,6 +17,7 @@ metacontract heads = fromRight $ compileAndLower procs mc
                   , procPayBounty
                   , procOuter
                   , procReturndataload
+                  , procCallHead
                   ]
 
 slocOuterState = 0
@@ -101,12 +102,7 @@ procInner = Proc "inner" [] "_" (Scope
             -- Mem: [caller, callvalue, calldatasize] ++ calldata
             ,(Let "trace_size_offset" (Add Calldatasize (Lit 0x20)))
             ,(Let "trace_offset" (Add (Var "trace_size_offset") (Lit 0x20)))
-            ,(Let "success1" (Call Gas (headAddress (Lit 0)) (Lit 0) (Lit 0x00) (Var "trace_offset") (Lit 0x00) (Lit 0x00)))
-            -- Propagate OOG and Instrumentation Error
-            ,(M.if_ (And (Iszero (Var "success1")) (M.leq Returndatasize (Lit 0x20)))
-                  (Scope [(Revert (Lit 0x00) (Lit 0x00))]))
-            ,(checkOrErr errorWrongOutputFormat (Eq (returndataload (Lit 0x00)) (Lit 1)))
-
+            ,(Let "success1" (callHead Gas (headAddress (Lit 0)) (Lit 0) (Lit 0x00) (Var "trace_offset") (Lit 0x00) (Lit 0x00)))
             ,(Returndatacopy (Var "trace_size_offset") (Lit 0x20) (Sub Returndatasize (Lit 0x20)))
             -- Mem: [caller, callvalue, calldatasize] ++ calldata ++ [trace_size] ++ trace ++ returndata
             ,(Let "trace_size" (Mload (Var "trace_size_offset")))
@@ -125,13 +121,7 @@ procInner = Proc "inner" [] "_" (Scope
                   -- - Disagreement: `FAIL([0xd15a9])`
                   -- - OOG: `FAIL([])`
                   -- - Instrumentation Error: `FAIL([code])`
-                  (Scope [(Let "success" (Call Gas (headAddress (Var "head_index")) (Lit 0) (Lit 0x00) (Var "returndata_offset") (Lit 0x00) (Lit 0x00)))
-                         -- propagate with OOG, disagreement, and instrumentation errors
-                         ,(M.if_ (Iszero (Var "success"))
-                               (Scope [(Let "first_word" (returndataload (Lit 0x00)))
-                                      ,(M.if_ (Eq (Var "first_word") (Lit 0xd15a9)) (revertWord 0xd15a9))
-                                      ,(M.if_ (M.leq Returndatasize (Lit 0x20)) (Scope [(Revert (Lit 0x00) (Lit 0x00))]))]))
-                         ,(checkOrErr errorWrongOutputFormat (Eq (returndataload (Lit 0x00)) (Lit 1)))
+                  (Scope [(Let "success" (callHead Gas (headAddress (Var "head_index")) (Lit 0) (Lit 0x00) (Var "returndata_offset") (Lit 0x00) (Lit 0x00)))
                          ,(Assign "returndata_size" (Sub Returndatasize (Lit 0x40)))
                          ,(Returndatacopy (Var "returndata_offset") (Lit 0x40) (Var "returndata_size"))
                          ,(M.if_ (Iszero (M.and3 (Eq (Var "success1") (Var "success"))
