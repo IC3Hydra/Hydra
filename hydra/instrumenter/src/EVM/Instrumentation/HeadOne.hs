@@ -149,7 +149,7 @@ memoryMOffset = traceMOffset + traceMSize
 getTracePtr = (Mload (Lit tracePtrMOffset))
 
 setTracePtr e = Nest (Scope [(Mstore (Lit tracePtrMOffset) e)
-                            ,(assert (M.leq traceSize (Lit traceMSize)))])
+                            ,(checkOrDie (M.leq traceSize (Lit traceMSize)))])
 
 traceSize = (Sub getTracePtr (Lit traceMOffset))
 
@@ -167,7 +167,6 @@ restore e1 e2 = (memcpyNoalias e1 (Lit backupMOffset) e2)
 
 -- maxTraceSize = memoryStashSize - traceOffset
 
-assert e = M.if_ (Iszero e) (Scope [Revert (Lit 0x00) (Lit 0x00)])
 callMc e1 e2 e3 e4 = (Call Gas (ProcCall "mc" []) (Lit 0) e1 e2 e3 e4)
 
 procInit = Proc "init" [] "_" (Scope
@@ -235,8 +234,8 @@ procCall = let regularCall = Scope
                  -- Call MC
                  -- Input format: [5, to, value] ++ input
                  -- Output format: [success] ++ output
-                 ,(assert (callMc (Sub (Var "in_offset") (Lit 0x60)) (Add (Var "in_size") (Lit 0x60)) (Lit 0x00) (Lit 0x00)))
-                 ,(assert (M.leq (Lit 0x20) Returndatasize))
+                 ,(checkOrDie (callMc (Sub (Var "in_offset") (Lit 0x60)) (Add (Var "in_size") (Lit 0x60)) (Lit 0x00) (Lit 0x00)))
+                 ,(checkOrDie (M.leq (Lit 0x20) Returndatasize))
                  -- store event type in trace
                  ,(Mstore (Var "record_ptr") (Lit 5))
                  ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
@@ -265,7 +264,7 @@ procCall = let regularCall = Scope
            ,(Assign "out_offset" (Add (Var "out_offset") (Lit memoryMOffset)))
            ,(IfElse (And (Lt (Lit 0) (Var "to")) (M.leq (Var "to") (Lit maxPrecompileAddress)))
                 -- TODO(lorenzb): check behaviour of precompiles when called with non-zero value
-                (Scope [(assert (Iszero (Var "value")))
+                (Scope [(checkOrDie (Iszero (Var "value")))
                        ,(Assign "success" (Call (Var "gas") (Var "to") (Var "value") (Var "in_offset") (Var "in_size") (Var "out_offset") (Var "out_size")))])
                 (Scope [(Let "record_ptr" getTracePtr)
                        ,(IfElse (Eq (Var "to") (ProcCall "mc" []))
