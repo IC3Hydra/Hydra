@@ -128,12 +128,10 @@ procs mc = [ procMemcpyPrecomp
            , procUnknownJumpdest
            , procReturndataload
            , procCallHead
-           , procOffsetMem
+           , procOffsetMem memoryMOffset
            ]
 
 -- TODO(lorenzb): Instrument msize, since the instrumentation may increase it.
-
-maxMem = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
 -- TODO(lorenzb): Unify constants between heads
 tracePtrMOffset :: Integer
@@ -158,12 +156,6 @@ calldataCOffset = 0x60
 
 traceStart = (M.add3 (Lit calldataCOffset) (Calldataload (Lit calldatasizeCOffset)) (Lit 0x20))
 traceEnd = Calldatasize
-
-offsetMem e = (ProcCall "offsetMem" [e])
-procOffsetMem = Proc "offsetMem" ["in"] "out" (Scope
-                [(checkOrDie (Lt (Var "in") (Lit maxMem)))
-                ,(Assign "out" (Add (Var "in") (Lit memoryMOffset)))
-                ])
 
 procInit = Proc "init" [] "_" (Scope
            [(checkOrDie (M.and3 (Or (Eq Caller (ProcCall "mc" [])) (Eq Caller Address))

@@ -31,6 +31,15 @@ checkOrErr w e =  (M.if_ (Iszero e)
 
 checkOrDie e = (M.if_ (Iszero e) (Scope [(M.die)]))
 
+maxMem = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+offsetMem e = (ProcCall "offsetMem" [e])
+procOffsetMem memoryMOffset =
+    Proc "offsetMem" ["in"] "out" (Scope
+    [(checkOrDie (Lt (Var "in") (Lit maxMem)))
+    ,(Assign "out" (Add (Var "in") (Lit memoryMOffset)))
+    ])
+
+
 returndataload e = (ProcCall "returndataload" [e])
 procReturndataload = Proc "returndataload" ["offset"] "data" (Scope
                      [(Let "backup" (Mload (Lit 0x00)))
