@@ -35,9 +35,7 @@ instrumentOps mc = concatMap aux
                                   , Op $ CALLDATALOAD    -- ⤳ S [N "calldata[0x20]"]
                                   ]
           -- TODO(lorenzb): CALLDATALOAD, CALLDATASIZE, CALLDATACOPY are vulnerable to overflow
-          aux (Op CALLDATALOAD) = [ Push 0x60 -- ⤳ S [N "calldata stash size", V "offset"]
-                                  , Op $ ADD                     -- ⤳ S [N "offset + calldata stash size"]
-                                  , Op $ CALLDATALOAD            -- ⤳ S [N "C[offset + calldata stash size]"]
+          aux (Op CALLDATALOAD) = [ ProcedureCall $ procTag "calldataload"
                                   ]
           aux (Op CALLDATASIZE) = [ Op $ CALLDATASIZE           -- ⤳ S [N "calldata size"]
                                   , Push 0x60 -- ⤳ S [N "calldata stash size", V "calldata size"]
@@ -132,6 +130,7 @@ procs mc = [ procMemcpyPrecomp
            , procCall
            , procBalance
            , procDone
+           , procCalldataload
            , procCalldatacopy
            , procInit
            , procMc mc
@@ -179,6 +178,9 @@ procInit = Proc "init" [] "_" (Scope
            ,(checkOrErr errorIncorrectCalldataSize (Eq (Sub Calldatasize (Lit 0x60)) (Calldataload (Lit 0x40))))
            ,(Mstore (Lit (memoryMOffset - 0x20)) (Lit 1))
            ,(setTracePtr (Lit traceMOffset))])
+
+procCalldataload = Proc "calldataload" ["offset"] "data" (Scope
+                   [(Assign "data" (Calldataload (Add (min_ (Var "offset") (Lit maxMem)) (Lit 0x60))))])
 
 procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "_" (Scope
                    [(M.if_ (Var "size")

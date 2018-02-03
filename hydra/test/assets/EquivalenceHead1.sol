@@ -42,9 +42,8 @@ contract EquivalenceHead1 {
             log2(0, 0, calldataload(calldatasize), 1337)
             log2(0, 0, calldataload(add(calldatasize, 1)), 1337)
             log2(0, 0, calldataload(0xFFFFF), 1337)
-            // TODO(lorenzb): Probably failing because of head1
-            // log2(0, 0, calldataload(sub(not(0), 1)), 1337)
-            // log2(0, 0, calldataload(not(0)), 1337)
+            log2(0, 0, calldataload(sub(not(0), 1)), 1337)
+            log2(0, 0, calldataload(not(0)), 1337)
         }
     }
 
