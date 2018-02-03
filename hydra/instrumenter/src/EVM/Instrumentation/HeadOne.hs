@@ -181,7 +181,10 @@ procInit = Proc "init" [] "_" (Scope
            ,(setTracePtr (Lit traceMOffset))])
 
 procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "_" (Scope
-                   [(Discard (Lit 314159265358979)),(Calldatacopy (Add (Var "dst") (Lit memoryMOffset)) (Add (Var "src") (Lit 0x60)) (Var "size"))])
+                   [(M.if_ (Var "size")
+                         (Scope [(Calldatacopy (offsetMem (Var "dst"))
+                                               (Add (min_ (Var "src") (Lit maxMem)) (Lit 0x60))
+                                               (Var "size"))]))])
 
 procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", "topic3", "topic4"] "_" (Scope
           [(Assign "in_offset" (Add (Var "in_offset") (Lit memoryMOffset)))
