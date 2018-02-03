@@ -189,33 +189,32 @@ procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "_" (Scope
 procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", "topic3", "topic4"] "_" (Scope
           [(Assign "in_offset" (Add (Var "in_offset") (Lit memoryMOffset)))
           ,(Let "record_ptr" getTracePtr)
-          -- back up words following input
-          ,(backup (Add (Var "in_offset") (Var "in_size"))
-                   (Mul (Add (Var "num_topics") (Lit 1)) (Lit 0x20)))
-          -- append to input: [topic1 .. topicn]
-          ,(M.if_ (Lt (Lit 0) (Var "num_topics")) (Scope [(Mstore (M.add3 (Var "in_offset") (Var "in_size") (Lit 0x00)) (Var "topic1"))]))
-          ,(M.if_ (Lt (Lit 1) (Var "num_topics")) (Scope [(Mstore (M.add3 (Var "in_offset") (Var "in_size") (Lit 0x20)) (Var "topic2"))]))
-          ,(M.if_ (Lt (Lit 2) (Var "num_topics")) (Scope [(Mstore (M.add3 (Var "in_offset") (Var "in_size") (Lit 0x40)) (Var "topic3"))]))
-          ,(M.if_ (Lt (Lit 3) (Var "num_topics")) (Scope [(Mstore (M.add3 (Var "in_offset") (Var "in_size") (Lit 0x60)) (Var "topic4"))]))
-          -- append to input: num_topics
-          ,(Mstore (M.add3 (Var "in_offset") (Var "in_size") (Mul (Var "num_topics") (Lit 0x20))) (Var "num_topics"))
+          ,(Let "prefix_size" (Add (Mul (Var "num_topics") (Lit 0x20)) (Lit 0x20)))
+          ,(Let "prefix_offset" (Sub (Var "in_offset") (Var "prefix_size")))
+          -- back up words preceding input
+          ,(backup (Var "prefix_offset") (Var "prefix_size"))
+          -- prepend to input: [num_topics, topic1 .. topicn]
+          ,(Mstore (Var "prefix_offset") (Var "num_topics"))
+          ,(M.if_ (Lt (Lit 0) (Var "num_topics")) (Scope [(Mstore (Add (Var "prefix_offset") (Lit 0x20)) (Var "topic1"))]))
+          ,(M.if_ (Lt (Lit 1) (Var "num_topics")) (Scope [(Mstore (Add (Var "prefix_offset") (Lit 0x40)) (Var "topic2"))]))
+          ,(M.if_ (Lt (Lit 2) (Var "num_topics")) (Scope [(Mstore (Add (Var "prefix_offset") (Lit 0x60)) (Var "topic3"))]))
+          ,(M.if_ (Lt (Lit 3) (Var "num_topics")) (Scope [(Mstore (Add (Var "prefix_offset") (Lit 0x80)) (Var "topic4"))]))
           -- call Metacontract
-          -- Input format: logdata ++ topics ++ [num_topics]
+          -- Input format: [num_topics] ++ topics ++ logdata
           -- Output format: SUCCESS([])
-          ,(assert (callMc (Var "in_offset") (Add (Var "in_size") (Mul (Add (Var "num_topics") (Lit 1)) (Lit 0x20))) (Lit 0x00) (Lit 0x00)))
-          ,(assert (Iszero Returndatasize))
+          ,(checkOrDie (callMc (Var "prefix_offset") (Add (Var "prefix_size") (Var "in_size")) (Lit 0x00) (Lit 0x00)))
+          ,(checkOrDie (Iszero Returndatasize))
           -- store event type in trace
           ,(Mstore (Var "record_ptr") (Var "num_topics"))
           ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
-          -- store sha3(logdata ++ topics) in trace
-          ,(Mstore (Var "record_ptr") (Sha3 (Var "in_offset")
-                                            (Add (Var "in_size") (Mul (Var "num_topics") (Lit 0x20)))))
+          -- store sha3(sha3(logdata) ++ topics) in trace
+          ,(Mstore (Var "prefix_offset") (Sha3 (Var "in_offset") (Var "in_size")))
+          ,(Mstore (Var "record_ptr") (Sha3 (Var "prefix_offset") (Var "prefix_size")))
           ,(Assign "record_ptr" (Add (Var "record_ptr") (Lit 0x20)))
           -- update trace pointer
           ,(setTracePtr (Var "record_ptr"))
           -- restore backup
-          ,(restore (Add (Var "in_offset") (Var "in_size"))
-                    (Mul (Add (Var "num_topics") (Lit 1)) (Lit 0x20)))])
+          ,(restore (Var "prefix_offset") (Var "prefix_size"))])
 
 procCall = let regularCall = Scope
                  [(Let "in_end" (Add (Var "in_offset") (Var "in_size")))
@@ -224,16 +223,16 @@ procCall = let regularCall = Scope
                  ,(Mstore (Lit $ backupMOffset + 0x20) (Var "to"))
                  ,(Mstore (Lit $ backupMOffset + 0x40) (Var "value"))
                  ,(Let "tracehash" (Sha3 (Lit backupMOffset) (Lit 0x60)))
-                 -- backup three words following input
-                 ,(backup (Var "in_end") (Lit 0x60))
-                 -- append [to, value, 5] to input
-                 ,(Mstore (Add (Var "in_end") (Lit 0x00)) (Var "to"))
-                 ,(Mstore (Add (Var "in_end") (Lit 0x20)) (Var "value"))
-                 ,(Mstore (Add (Var "in_end") (Lit 0x40)) (Lit 5) {- 5 is code for CALL-})
+                 -- backup three words preceding input
+                 ,(backup (Sub (Var "in_offset") (Lit 0x60)) (Lit 0x60))
+                 -- prepend [5, to, value] to input
+                 ,(Mstore (Sub (Var "in_offset") (Lit 0x60)) (Lit 5))
+                 ,(Mstore (Sub (Var "in_offset") (Lit 0x40)) (Var "to"))
+                 ,(Mstore (Sub (Var "in_offset") (Lit 0x20)) (Var "value"))
                  -- Call MC
-                 -- Input format: input ++ [to, value, 5]
+                 -- Input format: [5, to, value] ++ input
                  -- Output format: [success] ++ output
-                 ,(assert (callMc (Var "in_offset") (Add (Var "in_size") (Lit 0x60)) (Lit 0x00) (Lit 0x00)))
+                 ,(assert (callMc (Sub (Var "in_offset") (Lit 0x60)) (Add (Var "in_size") (Lit 0x60)) (Lit 0x00) (Lit 0x00)))
                  ,(assert (M.leq (Lit 0x20) Returndatasize))
                  -- store event type in trace
                  ,(Mstore (Var "record_ptr") (Lit 5))
@@ -254,7 +253,7 @@ procCall = let regularCall = Scope
                  -- update trace length
                  ,(setTracePtr (Var "record_ptr"))
                  -- restore backup
-                 ,(restore (Var "in_end") (Lit 0x60))
+                 ,(restore (Sub (Var "in_offset") (Lit 0x60)) (Lit 0x60))
                  -- output result
                  ,(Returndatacopy (Var "out_offset") (Lit 0x20) (min_ (Var "out_size") (Sub Returndatasize (Lit 0x20))))
                  ] in

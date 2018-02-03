@@ -42,12 +42,12 @@ Output format:
 Only accepts calls from first head.
 
 Input format:
-- for `LOG0`: `logdata ++ [0]`
-- for `LOG1`: `logdata ++ [topic1, 1]`
-- for `LOG2`: `logdata ++ [topic1, topic2, 2]`
-- for `LOG3`: `logdata ++ [topic1, topic2, topic3, 3]`
-- for `LOG4`: `logdata ++ [topic1, topic2, topic3, topic4, 4]`
-- for `CALL`: `calldata ++ [to, value, 5]`
+- for `LOG0`: `[0] ++ logdata`
+- for `LOG1`: `[1, topic1] ++ logdata`
+- for `LOG2`: `[2, topic1, topic2] ++ logdata`
+- for `LOG3`: `[3, topic1, topic2, topic3] ++ logdata`
+- for `LOG4`: `[4, topic1, topic2, topic3, topic4] ++ logdata`
+- for `CALL`: `[5, to, value] ++ calldata`
 
 Output format:
 - for `LOG*`: `SUCCESS([])`
@@ -73,11 +73,11 @@ The trace is a concatenation of records.
 We compress inputs by hashing them, but store full outputs.
 
 Record format:
-- `LOG0`: `[0, keccak256(logdata)]`
-- `LOG1`: `[1, keccak256(logdata ++ [topic1])]`
-- `LOG2`: `[2, keccak256(logdata ++ [topic1, topic2])]`
-- `LOG3`: `[3, keccak256(logdata ++ [topic1, topic2, topic3])]`
-- `LOG4`: `[4, keccak256(logdata ++ [topic1, topic2, topic3, topic4])]`
+- `LOG0`: `[0, keccak256([keccak256(logdata)])]`
+- `LOG1`: `[1, keccak256([keccak256(logdata), topic1])]`
+- `LOG2`: `[2, keccak256([keccak256(logdata), topic1, topic2])]`
+- `LOG3`: `[3, keccak256([keccak256(logdata), topic1, topic2, topic3])]`
+- `LOG4`: `[4, keccak256([keccak256(logdata), topic1, topic2, topic3, topic4])]`
 - `CALL`: `[5, keccak256([keccak256(calldata), to, value]), success, output_size] ++ output`
 - `BALANCE`: `[6, address, balance(address)]`
 
@@ -94,7 +94,7 @@ Only calls itself.
 Input format: `[caller, callvalue, calldata_size] ++ calldata ++ [trace_size] ++ trace`
 
 Output format:
-- Success: `SUCCESS([1, trace_read] ++ returndata)` 
+- Success: `SUCCESS([1, trace_read] ++ returndata)`
 - Failure: `FAIL([1, trace_read] ++ returndata)`
 - Disagreement: `FAIL([0xd15a9])`
 - OOG: `FAIL([])`
@@ -116,7 +116,7 @@ acts as a call forwarder, it needs a way to forward some of the attributes of a
 call to an instrumented contract: The first word of CALLDATA will be the address
 of the CALLER of the MC. The second word of CALLDATA will be the CALLVALUE the
 MC received. When the MC calls the instrumented contract it will always call
-with a CALLVALUE of 0. 
+with a CALLVALUE of 0.
 
 For calls to self, the instrumentation will follow the same calling convention:
 The first word of CALLDATA is the address of the MC, and  the second word of

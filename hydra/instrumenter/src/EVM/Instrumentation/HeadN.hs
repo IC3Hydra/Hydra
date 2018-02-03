@@ -221,21 +221,18 @@ procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", 
           -- check log type vs trace
           ,(checkOrErr disagreement (Eq (Var "num_topics") (Calldataload (Var "trace_ptr"))))
           ,(Assign "trace_ptr" (Add (Var "trace_ptr") (Lit 0x20)))
-          -- backup data following input
-          ,(backup (Add (Var "in_offset") (Var "in_size")) (Mul (Var "num_topics") (Lit 0x20)))
-          -- append to input: [topic1 .. topicn]
-          ,(M.if_ (Lt (Lit 0) (Var "num_topics")) (Scope [(Mstore (M.add3 (Var "in_offset") (Var "in_size") (Lit 0x00)) (Var "topic1"))]))
-          ,(M.if_ (Lt (Lit 1) (Var "num_topics")) (Scope [(Mstore (M.add3 (Var "in_offset") (Var "in_size") (Lit 0x20)) (Var "topic2"))]))
-          ,(M.if_ (Lt (Lit 2) (Var "num_topics")) (Scope [(Mstore (M.add3 (Var "in_offset") (Var "in_size") (Lit 0x40)) (Var "topic3"))]))
-          ,(M.if_ (Lt (Lit 3) (Var "num_topics")) (Scope [(Mstore (M.add3 (Var "in_offset") (Var "in_size") (Lit 0x60)) (Var "topic4"))]))
-          -- compute hash check vs trace
-          ,(Discard (Lit 8375683653234))
-          ,(Let "hash" (Sha3 (Var "in_offset")
-                             (Add (Var "in_size") (Mul (Var "num_topics") (Lit 0x20)))))
+          -- compute hash
+          ,(Mstore (Lit $ specialMOffset + 0x00) (Sha3 (Var "in_offset") (Var "in_size")))
+          ,(Mstore (Lit $ specialMOffset + 0x20) (Var "topic1"))
+          ,(Mstore (Lit $ specialMOffset + 0x40) (Var "topic2"))
+          ,(Mstore (Lit $ specialMOffset + 0x60) (Var "topic3"))
+          ,(Mstore (Lit $ specialMOffset + 0x80) (Var "topic4"))
+          ,(Let "hash" (Sha3 (Lit specialMOffset)
+                             (Add (Mul (Var "num_topics") (Lit 0x20)) (Lit 0x20))))
+          -- check trace
           ,(checkOrErr disagreement (Eq (Var "hash") (Calldataload (Var "trace_ptr"))))
           ,(Assign "trace_ptr" (Add (Var "trace_ptr") (Lit 0x20)))
-          -- restore data following input
-          ,(restore (Add (Var "in_offset") (Var "in_size")) (Mul (Var "num_topics") (Lit 0x20)))
+          -- update trace ptr
           ,(setTracePtr (Var "trace_ptr"))])
 
 -- TODO(lorenzb): Check size of input against maximum input size
