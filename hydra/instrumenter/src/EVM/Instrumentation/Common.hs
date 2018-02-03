@@ -20,10 +20,7 @@ errorWrongInputFormat = 0x1337c0ffee00000007
 errorFailedSelfCallInteracted = 0x1337c0ffee00000008
 errorPrecompileCalledWithNonzeroValue = 0x1337c0ffee00000009
 errorIncorrectCalldataSize = 0x1337c0ffee0000000a
-
--- crash code = revertWord code
---assert e = (M.if_ (Iszero e) (crash errorAssert))
---oog = Revert (Lit 0) (Lit 0)
+errorTraceTooLarge = 0x1337c0ffee0000000b
 
 err w = Nest (Scope [(Mstore (Lit 0x00) (Lit w))
                     ,(Revert (Lit 0x00) (Lit 0x20))])
