@@ -188,7 +188,9 @@ procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "_" (Scope
                                                (Var "size"))]))])
 
 procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", "topic3", "topic4"] "_" (Scope
-          [(Assign "in_offset" (Add (Var "in_offset") (Lit memoryMOffset)))
+          [(IfElse (Var "in_size")
+                (Scope [(Assign "in_offset" (offsetMem (Var "in_offset")))])
+                (Scope [(Assign "in_offset" (Lit memoryMOffset))]))
           ,(Let "record_ptr" getTracePtr)
           ,(Let "prefix_size" (Add (Mul (Var "num_topics") (Lit 0x20)) (Lit 0x20)))
           ,(Let "prefix_offset" (Sub (Var "in_offset") (Var "prefix_size")))
