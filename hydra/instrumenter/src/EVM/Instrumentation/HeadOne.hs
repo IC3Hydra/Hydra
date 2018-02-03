@@ -48,23 +48,17 @@ instrumentOps mc = concatMap aux
                                   , Op $ POP
                                   ]
           -- TODO(lorenzb): All ops that offset memory are vulnerable to overflow (MLOAD, MSTORE, MSTORE8, CALLDATALOAD, ...)
-          aux (Op MLOAD)        = [ Push memoryMOffset
-                                  -- [mem_start, offset]
-                                  , Op $ ADD
+          aux (Op MLOAD)        = [ ProcedureCall $ procTag "offsetMem"
                                   -- [mem_start + offset]
                                   , Op $ MLOAD
                                   -- [M[mem_start + offset]]
                                   ]
-          aux (Op MSTORE)       = [ Push memoryMOffset
-                                  -- [mem_start, offset, word]
-                                  , Op $ ADD
+          aux (Op MSTORE)       = [ ProcedureCall $ procTag "offsetMem"
                                   -- [mem_start + offset, word]
                                   , Op $ MSTORE
                                   -- []
                                   ]
-          aux (Op MSTORE8)      = [ Push memoryMOffset
-                                  -- [mem_start, offset, byte]
-                                  , Op $ ADD
+          aux (Op MSTORE8)      = [ ProcedureCall $ procTag "offsetMem"
                                   -- [mem_start + offset, byte]
                                   , Op $ MSTORE8
                                   -- []
@@ -148,6 +142,7 @@ procs mc = [ procMemcpyPrecomp
            , procUnknownJumpdest
            , procReturndataload
            , procCallHead
+           , procOffsetMem memoryMOffset
            ]
 
 backupMOffset = 0x00
