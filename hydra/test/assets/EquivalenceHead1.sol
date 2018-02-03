@@ -105,25 +105,65 @@ contract EquivalenceHead1 {
             log1(0, 100, 1337)
             calldatacopy(0, 0xFFFFFFFF, 100)
 
-            // TODO(lorenzb): Test very high values for src
+            calldatacopy(0, not(0), 100)
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(0, sub(not(0), 1), 100)
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
+
+            calldatacopy(0, sub(not(0), 110), 100)
+            log1(0, 100, 1337)
+            calldatacopy(0, 0xFFFFFFFF, 100)
         }
     }
 
-    function testMemory() {
+    function testMemory1() {
         assembly {
-            // TODO(lorenzb): Fix failing test
-            stop
             log2(0, 0, msize, 1337)
-            mstore(0, 1)
-            log2(0, 32, msize, 1337)
-            log2(0, 128, msize, 1337)
-            log3(0, 128, msize, 1337, 1)
-            log4(0, 128, msize, 1337, 1, 2)
-            log4(0, 128, msize, 1337, 1, 2)
+            log2(0, msize, msize, 1337)
+            log2(0, add(msize, 32), msize, 1337)
+            log3(0, msize, msize, 1337, 1)
+            log4(0, add(msize, 32), msize, 1337, 1, 2)
+            log4(0, msize, msize, 1337, 1, 2)
             mstore(0, add(mload(0), mload(1)))
             log2(0, 128, msize, 1337)
         }
     }
+
+    function testMemory2(address distort) {
+        assembly {
+            log2(0, msize, msize, 1337)
+            calldatacopy(0, 0, add(msize, 100))
+            log2(0, 100, msize, 1337)
+            jumpi(pc, iszero(eq(distort, mload(4))))
+
+            let success := 1
+
+            success := call(gas, distort, 0, 0, 32, 0, 32)
+            jumpi(pc, iszero(success))
+            jumpi(pc, eq(distort, mload(4)))
+            log2(0, msize, msize, 1337)
+
+            success := call(gas, distort, 0, 0, msize, 0, msize)
+            jumpi(pc, iszero(success))
+            log2(0, msize, msize, 1337)
+
+            success := call(gas, distort, 0, 0, add(msize, 1), 0, msize)
+            jumpi(pc, iszero(success))
+            log2(0, msize, msize, 1337)
+
+            success := call(gas, distort, 0, 0, msize, 0, add(msize, 1))
+            jumpi(pc, iszero(success))
+            log2(0, msize, msize, 1337)
+
+            success := call(gas, distort, 0, 0, add(msize, 32), 0, add(msize, 32))
+            jumpi(pc, iszero(success))
+            log2(0, msize, msize, 1337)
+        }
+    }
+
 
     function testSha3() {
         assembly {
