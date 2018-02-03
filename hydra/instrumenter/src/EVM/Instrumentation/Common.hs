@@ -88,6 +88,11 @@ procUnknownJumpdest = Proc "unknownJumpdest" [] "_" (Scope
                       [(Discard (Lit 314159265358979)), (Discard (ProcCall "done" [Lit 0, Lit 0, Lit 0]))])
 
 
+procSha3 = Proc "sha3" ["offset", "size"] "hash" (Scope
+           [(M.if_ (Var "size")
+                 (Scope [(Assign "offset" (offsetMem (Var "offset")))]))
+           ,(Assign "hash" (Sha3 (Var "offset") (Var "size")))])
+
 procLog0 = Proc "log0" ["in_offset", "in_size"] "_" (Scope
            [Discard (ProcCall "log" [(Lit 0), (Var "in_offset"), (Var "in_size"), (Lit 0), (Lit 0), (Lit 0), (Lit 0)])])
 

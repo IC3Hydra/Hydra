@@ -214,11 +214,6 @@ procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "data" (Scope
                                                Calldatasize
                                                (Sub (Var "size") (Var "copy")))]))])
 
-procSha3 = Proc "sha3" ["offset", "size"] "hash" (Scope
-           [(M.if_ (Var "size")
-                 (Scope [(Assign "offset" (offsetMem (Var "offset")))]))
-           ,(Assign "hash" (Sha3 (Var "offset") (Var "size")))])
-
 procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", "topic3", "topic4"] "_" (Scope
           [(M.if_ (Var "in_size")
                 (Scope [(Assign "in_offset" (offsetMem (Var "in_offset")))]))

@@ -63,12 +63,7 @@ instrumentOps mc = concatMap aux
                                   , Op $ MSTORE8
                                   -- []
                                   ]
-          aux (Op SHA3)         = [ Push memoryMOffset
-                                  -- [mem_start, offset, size]
-                                  , Op $ ADD
-                                  -- [mem_start + offset, size]
-                                  , Op $ SHA3
-                                  -- [hash]
+          aux (Op SHA3)         = [ ProcedureCall $ procTag "sha3"
                                   ]
           aux (Op JUMP)         = [ TagJump "jumptable"
                                   ]
@@ -127,6 +122,7 @@ procs :: Integer -> [Proc]
 procs mc = [ procMemcpyPrecomp
            , procMemcpyNoalias
            , procMin
+           , procSha3
            , procLog0
            , procLog1
            , procLog2
