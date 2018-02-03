@@ -105,6 +105,7 @@ class TestHydra(PyEthereumTestCase):
             ("testCalldata1", [utils.bytearray_to_int(utils.sha3(b"foobar")), 0xfa14]),
             ("testCalldata2", [utils.bytearray_to_int(utils.sha3(b"foobar")), 0xfa14]),
             ("testMemory", []),
+            ("testSha3", []),
             ("testExternalCalls", [self.external_distort.address]),
             ("testSelfCalls", []),
         ]

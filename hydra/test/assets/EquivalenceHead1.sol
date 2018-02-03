@@ -126,6 +126,28 @@ contract EquivalenceHead1 {
         }
     }
 
+    function testSha3() {
+        assembly {
+            mstore(0, sha3(0, 128))
+            log1(0, 64, 1337)
+
+            mstore(0, sha3(0, 129))
+            log1(0, 64, 1337)
+
+            mstore(0, sha3(1, 31))
+            log1(0, 64, 1337)
+
+            mstore(0, sha3(15, 16))
+            log1(0, 64, 1337)
+
+            mstore(0, sha3(sub(not(0), 1), 0))
+            log1(0, 64, 1337)
+
+            mstore(0, sha3(not(0), 0))
+            log1(0, 64, 1337)
+        }
+    }
+
     // TODO(lorenzb): Test for super large parameters to various opcodes
 
     function testExternalCalls(address distort) {

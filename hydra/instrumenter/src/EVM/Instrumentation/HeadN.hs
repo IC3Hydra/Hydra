@@ -119,6 +119,7 @@ procs mc = [ procMemcpyPrecomp
            , procLog
            , procCall
            , procBalance
+           , procSha3
            , procDone
            , procCalldatacopy
            , procCalldataload
