@@ -34,7 +34,6 @@ instrumentOps mc = concatMap aux
           aux (Op CALLVALUE)    = [ Push 0x20       -- ⤳ S [N "0x20"]
                                   , Op $ CALLDATALOAD    -- ⤳ S [N "calldata[0x20]"]
                                   ]
-          -- TODO(lorenzb): CALLDATALOAD, CALLDATASIZE, CALLDATACOPY are vulnerable to overflow
           aux (Op CALLDATALOAD) = [ ProcedureCall $ procTag "calldataload"
                                   ]
           aux (Op CALLDATASIZE) = [ Op $ CALLDATASIZE           -- ⤳ S [N "calldata size"]
