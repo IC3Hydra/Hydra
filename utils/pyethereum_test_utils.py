@@ -127,7 +127,7 @@ class PyEthereumHydraDeployment(HydraDeployment):
         from subprocess import check_call
         check_call(["stack", "build"], cwd=self.instrumenter_path)
 
-    def deploy_contract(self, code, language, **kwargs):
+    def deploy_contract(self, code, abi, language, **kwargs):
         """
         Deploys a contract to the test chain. Returns the contract's address
         and an ABI wrapper if available
@@ -141,18 +141,25 @@ class PyEthereumHydraDeployment(HydraDeployment):
 
         gas_used_after = self.deployment_chain.head_state.gas_used
 
+        if hasattr(contract, 'address'):
+            address = contract.address
+        else:
+            address = contract
+
+        if abi is not None:
+            contract = tester.ABIContract(self.deployment_chain, abi, address)
+
         if language == "evm":
             self.logger.debug("Deploying contract of len {} at {} used {} gas".format(
                 len(utils.encode_hex(code)),
-                utils.encode_hex(contract),
+                utils.encode_hex(address),
                 gas_used_after - gas_used_before))
-            return contract, None
         else:
             self.logger.debug("Deploying contract at {} used {} gas".format(
-                utils.encode_hex(contract.address),
+                utils.encode_hex(address),
                 gas_used_after - gas_used_before))
 
-            return contract.address, contract
+        return address, contract
 
     def get_nonce(self):
         return int(self.deployment_chain.head_state.get_nonce(self.creator_addr))

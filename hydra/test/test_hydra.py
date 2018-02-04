@@ -112,7 +112,7 @@ class TestHydra(PyEthereumTestCase):
         ]
 
         for (fn, args) in subtests:
-            # if fn != "testCalldata2": continue
+#            if fn != "testLogs": continue
 
             with self.subTest(function=fn):
                 print('Subtest function:', fn)
@@ -125,7 +125,7 @@ class TestHydra(PyEthereumTestCase):
                 kall(self.t, self.s, self.ct, self.single_mc_address, fn, *args)
                 print('single mc done')
                 ######
-                #configure_logging(config_string=config_string)
+                # configure_logging(config_string=config_string)
                 ######
                 kall(self.t, self.s, self.ct, self.multi_mc_address, fn, *args)
                 print('multi mc done')

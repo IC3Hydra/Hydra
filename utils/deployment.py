@@ -112,6 +112,29 @@ class HydraDeployment(metaclass=ABCMeta):
         # get the signatures of all functions in the ABI
         abi_sigs, init_sig = self.extract_abi(include_constructor)
 
+        # TODO(lorenzb): This currently fails because serpent contracts
+        # seem to have a different ABI format. So instead we just use
+        # the first head's ABI
+        #
+        # get the common ABI of heads
+        # abis = [get_abi(path) for path in self.paths_to_heads]
+        # abidicts = [{entry['name']: entry for entry in abi} for abi in abis]
+        # common_names = None
+        # for abidict in abidicts:
+        #     if common_names is None:
+        #         common_names = set(abidict.keys())
+        #     else:
+        #         common_names.intersection_update(abidict.keys())
+        # print('SHARED NAMES', common_names)
+        # for common_name in common_names:
+        #     assert all(abidict[common_name] == abidicts[0][common_name] for abidict in abidicts)
+        # for i, abidict in enumerate(abidicts):
+        #     for name in abidict:
+        #         if name not in common_names:
+        #             print('Head {} has name not found in all heads: {}'.format(i, name))
+        # common_abi = [abidicts[0][common_name] for common_name in common_names]
+        common_abi = get_abi(self.paths_to_heads[0])
+
         # hard-code the head addresses and valid signatures into
         # the Meta Contract
         # self.logger.debug("FORMATTING META-CONTRACT")
@@ -142,13 +165,13 @@ class HydraDeployment(metaclass=ABCMeta):
         self.logger.debug("DEPLOYING ALL CONTRACTS")
 
         self.logger.debug("DEPLOYING THE META-CONTRACT {}".format(self.path_to_metacontract))
-        address, abi = self.deploy_contract(meta_contract_code, "evm", **kwargs)
+        address, abi = self.deploy_contract(meta_contract_code, common_abi, "evm", **kwargs)
         self.logger.debug("DEPLOYED at 0x{}".format(address.hex()))
         deployed_contracts.append((address, abi))
 
         for i, (code, language) in enumerate(head_codes):
             self.logger.debug("INSTRUMENTING HEAD {}".format(self.paths_to_heads[i]))
-            address, abi = self.deploy_contract(code, language)
+            address, abi = self.deploy_contract(code, None, language)
             self.logger.debug("DEPLOYED at 0x{}".format(address.hex()))
             deployed_contracts.append((address, abi))
 
@@ -385,7 +408,7 @@ class HydraDeployment(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def deploy_contract(self, code, name, **kwargs):
+    def deploy_contract(self, code, abi, name, **kwargs):
         """
         Deploys a contract and returns the contract's address and an ABI hook
         """
