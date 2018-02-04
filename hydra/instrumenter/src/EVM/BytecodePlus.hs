@@ -33,16 +33,17 @@ lift contract = (contractWithTaggedJumpdests,  jumpdestpcsToTags)
           aux _              = Nothing
           jumpdestpcsToTags = mapMaybe aux contractWithPCs
           aux2 (JUMPDEST, pc) = TagJumpdest (pc2tag pc)
+          aux2 (PUSH _ i, _)  = Push i
           aux2 (op, _)        = Op op
           contractWithTaggedJumpdests = map aux2 contractWithPCs
           aux3 [] = []
           aux3 [x] = [x]
-          aux3 (Op (PUSH w pc) : Op JUMP : xs) = case lookup pc jumpdestpcsToTags of
+          aux3 (Push pc : Op JUMP : xs) = case lookup pc jumpdestpcsToTags of
                                                      (Just t) -> TagJump t : aux3 xs
-                                                     Nothing  -> Op (PUSH w pc) : Op JUMP : aux3 xs
-          aux3 (Op (PUSH w pc) : Op JUMPI : xs) = case lookup pc jumpdestpcsToTags of
+                                                     Nothing  -> Push pc : Op JUMP : aux3 xs
+          aux3 (Push pc : Op JUMPI : xs) = case lookup pc jumpdestpcsToTags of
                                                       (Just t) -> TagJumpi t : aux3 xs
-                                                      Nothing  -> Op (PUSH w pc) : Op JUMPI : aux3 xs
+                                                      Nothing  -> Push pc : Op JUMPI : aux3 xs
           aux3 (x : x' : xs) = x : aux3 (x' : xs)
           contractWithStaticJumps = aux3 contractWithTaggedJumpdests
 
