@@ -9,5 +9,5 @@ pycryptodome
 numpy
 git+https://github.com/ethereum/pyethereum.git
 git+https://github.com/ethereum/serpent.git
-git+https://github.com/ethereum/viper.git
+git+https://github.com/ethereum/vyper.git
 git+https://github.com/pipermerriam/web3.py@3115ef233ee71740eae455d1cf5325084bf4809d

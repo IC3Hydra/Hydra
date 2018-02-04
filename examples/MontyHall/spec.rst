@@ -84,7 +84,7 @@ rationals.
 
 Unless otherwise specified, where relevant, bit representations are
 big-endian.  `int128` is chosen as the canonical datatype for its
-compatibility with both Solidity and Viper.  Additional constraints
+compatibility with both Solidity and Vyper.  Additional constraints
 are placed on the variables when necessary.
 
 The ``value`` and ``block_num`` types are not represented in the API, 

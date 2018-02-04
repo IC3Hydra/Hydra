@@ -1,14 +1,13 @@
-from ethereum.tools import tester
-from examples.MontyHall.test.utils import *
+from examples.MontyHall.test.test_utils import *
 
 import glob
 from os.path import basename
 import unittest
 import numpy as np
 from copy import copy
-import sys
 
 from utils.pyethereum_test_utils import PyEthereumTestCase
+from examples.MontyHall.test import PATH_TO_HEADS
 
 
 class TestMonthyHallFlo(PyEthereumTestCase):

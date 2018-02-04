@@ -7,7 +7,7 @@ import os
 languages = {
     '.sol': 'solidity',
     '.se': 'serpent',
-    '.vy': 'viper'
+    '.vy': 'vyper'
 }
 
 RAND_VAL = 0.975

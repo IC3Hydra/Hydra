@@ -3,9 +3,6 @@ from ethereum.tools.tester import TransactionFailed
 from hashlib import sha256
 from enum import IntEnum, Enum
 
-META_CONTRACT = 'hydra/metacontract/Hydra.sol'
-PATH_TO_HEADS = 'examples/MontyHall/heads/'
-
 
 def to_wei(ether):
     return int(ether * 10**18)
