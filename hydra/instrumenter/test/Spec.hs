@@ -44,7 +44,8 @@ qcProps = testGroup "(byte code)"
     , QC.testProperty "parseInverse" prop_parseInverse
     , QC.testProperty "assembleInverse" prop_assembleInverse
     , QC.testProperty "hexStringToByteStringInverse" prop_hexStringToByteStringInverse
-    , QC.testProperty "instrumentationRuns" prop_instrumentationRuns
+    , QC.testProperty "instrumentFirstRuns" prop_instrumentFirstRuns
+    , QC.testProperty "instrumentNthRuns" prop_instrumentNthRuns
     ]
 
 prop_word8ToOpcodeInverse :: Word8 -> Bool
@@ -71,5 +72,8 @@ prop_hexStringToByteStringInverse :: ByteString.ByteString -> Bool
 prop_hexStringToByteStringInverse bs =
     bs == (BC.hexStringToByteString . BC.byteStringToHexString) bs
 
-prop_instrumentationRuns :: Integer -> [BC.Opcode] -> Property
-prop_instrumentationRuns addr ops = addr <= (2^256-1) ==> either (const True) (const True) (instrument addr ops)
+prop_instrumentFirstRuns :: Integer -> [BC.Opcode] -> Property
+prop_instrumentFirstRuns addr ops = addr <= (2^256-1) ==> either (const True) (const True) (instrumentFirst addr ops)
+
+prop_instrumentNthRuns :: Integer -> [BC.Opcode] -> Property
+prop_instrumentNthRuns addr ops = addr <= (2^256-1) ==> either (const True) (const True) (instrumentNth addr ops)
