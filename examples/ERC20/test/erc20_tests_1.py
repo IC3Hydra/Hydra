@@ -344,7 +344,8 @@ class TestViperERC20(TestERC20):
 
         from viper import compiler
         cls.t.languages['viper'] = compiler.Compiler()
-        contract_code = open(PATH_TO_CONTRACTS + '/ERC20.v.py').read()
+        with open(PATH_TO_CONTRACTS + '/ERC20.v.py') as fd:
+            contract_code = fd.read()
         cls.c = cls.s.contract(contract_code, language='viper')
         # Bad version of contract where totalSupply / num_issued never gets updated after init
         # (required for full decision/branch coverage)
@@ -399,7 +400,8 @@ class TestSolidity1ERC20(TestERC20):
     def setUpClass(cls):
         super(TestSolidity1ERC20, cls).setUpClass()
 
-        contract_code = open(PATH_TO_CONTRACTS + '/nonviper/ERC20_solidity_1.sol').read()
+        with open(PATH_TO_CONTRACTS + '/nonviper/ERC20_solidity_1.sol') as fd:
+            contract_code = fd.read()
         cls.c = cls.s.contract(contract_code, language='solidity')
 
         cls.initial_state = cls.s.snapshot()
@@ -432,7 +434,8 @@ class TestSolidity2ERC20(TestERC20):
     def setUpClass(cls):
         super(TestSolidity2ERC20, cls).setUpClass()
 
-        contract_code = open(PATH_TO_CONTRACTS + '/nonviper/ERC20_solidity_2.sol').read()
+        with open(PATH_TO_CONTRACTS + '/nonviper/ERC20_solidity_2.sol') as fd:
+            contract_code = fd.read()
         cls.c = cls.s.contract(contract_code, language='solidity')
 
         cls.initial_state = cls.s.snapshot()
