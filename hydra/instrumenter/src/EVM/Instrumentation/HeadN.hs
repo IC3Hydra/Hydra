@@ -248,12 +248,14 @@ procCall = let selfCall = (Scope
                                                 (Var "in_size"))
                                 ,(Let "special_ptr" (Add (Lit $ specialMOffset + 0x60) (Var "in_size")))
                                 -- [caller, callvalue, calldata_size] ++ calldata
-                                ,(Mstore (Var "special_ptr") (Sub traceEnd getTracePtr))
-                                -- [caller, callvalue, calldata_size] ++ calldata ++ [trace_size]
+                                ,(Let "remaining_trace_length" (Sub traceEnd getTracePtr))
+                                ,(Mstore (Var "special_ptr") (Var "remaining_trace_length"))
                                 ,(M.inc "special_ptr" (Lit 0x20))
+                                -- [caller, callvalue, calldata_size] ++ calldata ++ [trace_size]
                                 ,(Calldatacopy (Var "special_ptr")
                                                getTracePtr
-                                               (Sub traceEnd getTracePtr))
+                                               (Var "remaining_trace_length"))
+                                ,(M.inc "special_ptr" (Var "remaining_trace_length"))
                                 -- [caller, callvalue, calldata_size] ++ calldata ++ [trace_size]
                                 -- Perform call
                                 ,(Assign "success" (callHead Gas Address (Lit 0) (Lit specialMOffset) (Sub (Var "special_ptr") (Lit specialMOffset)) (Lit 0x00) (Lit 0x00)))
