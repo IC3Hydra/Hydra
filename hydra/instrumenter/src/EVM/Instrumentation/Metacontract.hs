@@ -20,6 +20,9 @@ metacontract heads = fromRight $ compileAndLower procs mc
                   , procCallHead
                   ]
 
+-- TODO(lorenzb): Implement support for HYDRA_INIT!
+-- TODO(lorenzb): Implement ABI checker
+
 slocOuterState = 0
 outerStateBountyPaid = 1
 outerStateMutexOn = 2
