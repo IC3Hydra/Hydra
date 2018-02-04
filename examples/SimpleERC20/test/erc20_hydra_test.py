@@ -6,7 +6,7 @@ from utils.pyethereum_test_utils import PyEthereumHydraDeployment
 from utils.deployment import get_contract_translator, kall
 
 from examples.SimpleERC20.test import *
-from examples.SimpleERC20.test import erc20_test_florian, erc20_test_phil, erc20_test_gas_costs
+from examples.ERC20.test import erc20_tests_1, erc20_tests_2, erc20_test_gas_costs
 
 from ethereum.slogging import configure_logging
 config_string = ':trace'
@@ -16,10 +16,10 @@ config_string = ':trace'
 def deploy_erc20_mc(_tester, chain):
     mc_path = META_CONTRACT
     head_files = [
-        PATH_TO_HEADS + 'ERC20_florian.sol',
-        PATH_TO_HEADS + 'ERC20_florian.se',
-        PATH_TO_HEADS + 'ERC20_lorenz.sol',
-        PATH_TO_HEADS + 'ERC20_phil.vy',
+        PATH_TO_HEADS + 'ERC20_solidity_1.sol',
+        PATH_TO_HEADS + 'ERC20_solidity_2.sol',
+        PATH_TO_HEADS + 'ERC20_serpent.se',
+        PATH_TO_HEADS + 'ERC20_viper.vy',
         ]
 
     pyeth_deploy = PyEthereumHydraDeployment(chain,
@@ -50,11 +50,11 @@ def deploy_erc20_mc(_tester, chain):
     return hydra, heads, ct
 
 
-class TestFlo(erc20_test_florian.TestERC20Flo):
+class Test1(erc20_tests_1.TestERC20):
 
     @classmethod
     def setUpClass(cls):
-        super(TestFlo, cls).setUpClass()
+        super(Test1, cls).setUpClass()
 
         c, heads, ct = deploy_erc20_mc(cls.t, cls.s)
         cls.c = c
@@ -72,10 +72,10 @@ class TestFlo(erc20_test_florian.TestERC20Flo):
         self.assertFalse(self.c.bountyClaimed())
 
 
-class TestPhil(erc20_test_phil.TestERC20):
+class Test2(erc20_tests_2.TestERC20Flo):
     @classmethod
     def setUpClass(cls):
-        super(TestPhil, cls).setUpClass()
+        super(Test2, cls).setUpClass()
 
         cls.s.head_state.gas_limit = 10**80
 
@@ -118,7 +118,7 @@ class TestGasCosts(erc20_test_gas_costs.TestGasCosts):
 def load_tests(loader, tests, pattern):
     full_suite = unittest.TestSuite()
 
-    for suite in [TestPhil, TestFlo]:
+    for suite in [Test1, Test2]:
         tests = loader.loadTestsFromTestCase(suite)
         full_suite.addTests(tests)
     return full_suite

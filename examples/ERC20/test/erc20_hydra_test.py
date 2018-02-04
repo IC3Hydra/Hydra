@@ -5,13 +5,13 @@ import types
 # Allow for running tests either in root or ERC20 dir
 try:
     from examples.ERC20.test.test_config import *
-    from examples.ERC20.test import erc20_tests_1, erc20_tests_2
+    from examples.ERC20.test import erc20_tests_1, erc20_tests_2, erc20_test_gas_costs
     INSTRUMENTER_PATH = "hydra/instrumenter/"
 except:
     PATH_TO_CONTRACTS = "."
     META_CONTRACT = "../../hydra/metacontract/Hydra.sol"
     INSTRUMENTER_PATH = "../../hydra/instrumenter/"
-    import erc20_tests_1, erc20_tests_2
+    import erc20_tests_1, erc20_tests_2, erc20_test_gas_costs
 
 from utils.pyethereum_test_utils import PyEthereumHydraDeployment
 from utils.deployment import get_contract_translator, kall
@@ -80,6 +80,26 @@ class TestSuite1(erc20_tests_1.TestERC20):
     @classmethod
     def setUpClass(cls):
         super(TestSuite1, cls).setUpClass()
+
+        cls.s.head_state.gas_limit = 10**80
+
+        c, heads, ct = deploy_erc20_mc(cls.t, cls.s)
+        cls.c = c
+        cls.heads = heads
+        cls.ignore_logs = True
+
+        cls.listenForEvents()
+
+        cls.initial_state = cls.s.snapshot()
+
+    def setUp(self):
+        super().setUp()
+
+
+class TestGasCosts(erc20_test_gas_costs.TestGasCosts):
+    @classmethod
+    def setUpClass(cls):
+        super(TestGasCosts, cls).setUpClass()
 
         cls.s.head_state.gas_limit = 10**80
 

@@ -109,17 +109,18 @@ contract MontyHall {
     }
 
     function OpenDoors(address _sender, uint256 _msg_value, int128 openedDoors, int128 gameID) returns (bool[2] success) {
-        assert(_msg_value == 0);
+        if (_msg_value != 0) { return [false, false]; }
 
-        if ( gameID < 0 || gameID >= nextGameID ) { return [false, false]; }
+        bool[2] memory _fail = [true, false];
+        if ( gameID < 0 || gameID >= nextGameID ) { return _fail; }
         
         Game storage game = montyStruct[gameID];
         int128 n = game.n;
         int128 k = game.k;
         
-        if ( game.lifecycleStep != 2 ) { return [false, false]; }
-        if ( _sender != game.houseAcct ) { return [false, false]; }
-        if ( hatchTriggered ) { return [false, false]; }
+        if ( game.lifecycleStep != 2 ) { return _fail; }
+        if ( _sender != game.houseAcct ) { return _fail; }
+        if ( hatchTriggered ) { return _fail; }
         
         // check that ``openedDoors'' specifies exactly k doors other than
         // the guessed one
@@ -132,7 +133,7 @@ contract MontyHall {
 
         if ( count != k ) { return [false, false]; }
         
-        if ( isBitSet(openedDoors, game.round1DoorGuess) ) { return [false, false]; }
+        if ( isBitSet(openedDoors, game.round1DoorGuess) ) { return _fail; }
         
         game.openedDoors = openedDoors;
         game.lifecycleStep = 3;
@@ -141,35 +142,38 @@ contract MontyHall {
     }
 
     function isOpened(address _sender, uint256 _msg_value, int128 doorNum, int128 gameID) constant returns (bool[2] isOpened) {
-        assert(_msg_value == 0);
+        if (_msg_value != 0) { return [false, false]; }
 
-        if ( gameID < 0 || gameID >= nextGameID ) { return [false, false]; }
+        bool[2] memory _fail = [true, false];
+        if ( gameID < 0 || gameID >= nextGameID ) { return _fail; }
 
         Game storage game = montyStruct[gameID];
         int128 n = game.n;
 
-        if ( doorNum < 0 || doorNum >= n ) { return [false, false]; }
+        if ( doorNum < 0 || doorNum >= n ) { return _fail; }
 
-        if ( game.lifecycleStep < 3 || game.lifecycleStep > 5 ) { return [false, false]; }
+        if ( game.lifecycleStep < 3 || game.lifecycleStep > 5 ) { return _fail; }
 
         return [true, isBitSet(game.openedDoors, doorNum)];
     }
 
     function PlayMontyRound2(address _sender, uint256 _msg_value, int128 round2DoorGuess, int128 gameID) returns (bool[2] success) {
-        assert(_msg_value == 0);
+        if (_msg_value != 0) { return [false, false]; }
 
-        if ( gameID < 0 || gameID >= nextGameID ) { return [false, false]; }
+        bool[2] memory _fail = [true, false];
+
+        if ( gameID < 0 || gameID >= nextGameID ) { return _fail; }
         
         Game storage game = montyStruct[gameID];
         int128 n = game.n;
         
-        if ( round2DoorGuess < 0 || round2DoorGuess >= n ) { return [false, false]; }
-        if ( game.lifecycleStep != 3 ) { return [false, false]; }
+        if ( round2DoorGuess < 0 || round2DoorGuess >= n ) { return _fail; }
+        if ( game.lifecycleStep != 3 ) { return _fail; }
         
-        if ( _sender != game.contestantAcct ) { return [false, false]; }
-        if ( hatchTriggered ) { return [false, false]; }
+        if ( _sender != game.contestantAcct ) { return _fail; }
+        if ( hatchTriggered ) { return _fail; }
         
-        if ( isBitSet(game.openedDoors, round2DoorGuess) ) { return [false, false]; }
+        if ( isBitSet(game.openedDoors, round2DoorGuess) ) { return _fail; }
         
         game.round2DoorGuess = round2DoorGuess;
         game.lifecycleStep = 4;
@@ -178,21 +182,23 @@ contract MontyHall {
     }
     
     function EndGame(address _sender, uint256 _msg_value, int128 winningDoor, bytes32 witness, int128 gameID) returns (uint256[6] success) {
-        assert(_msg_value == 0);
+        if (_msg_value != 0) { return [uint256(0), 0, 0, 0, 0, 0]; }
 
-        if ( gameID < 0 || gameID >= nextGameID ) { revert(); }
+        uint256[6] memory _fail = [uint256(1), 0, 0, 0, 0, 0];
+
+        if ( gameID < 0 || gameID >= nextGameID ) { return _fail; }
         
         Game storage game = montyStruct[gameID];
         int128 n = game.n;
+
+        if ( _sender != game.houseAcct ) { return _fail; }
+        if ( winningDoor < 0 || winningDoor >= n ) { return _fail; }
+        if ( game.lifecycleStep != 4 ) { return _fail; }
+        if ( hatchTriggered ) { return _fail; }
         
-        if ( _sender != game.houseAcct ) { return [uint256(0), 0, 0, 0, 0, 0]; }
-        if ( winningDoor < 0 || winningDoor >= n ) { return [uint256(0), 0, 0, 0, 0, 0]; }
-        if ( game.lifecycleStep != 4 ) { return [uint256(0), 0, 0, 0, 0, 0]; }
-        if ( hatchTriggered ) { return [uint256(0), 0, 0, 0, 0, 0]; }
+        if ( isBitSet(game.openedDoors, winningDoor) ) { return _fail; }
         
-        if ( isBitSet(game.openedDoors, winningDoor) ) { return [uint256(0), 0, 0, 0, 0, 0]; }
-        
-        if ( commit(winningDoor, witness) != game.winningDoorCommit ) { return [uint256(0), 0, 0, 0, 0, 0]; }
+        if ( commit(winningDoor, witness) != game.winningDoorCommit ) { return _fail; }
         
         if ( winningDoor == game.round2DoorGuess ) {
             game.winner = 2;
@@ -210,15 +216,17 @@ contract MontyHall {
     }
     
     function Payout(address _sender, uint256 _msg_value, bool house, int128 gameID) returns (uint256[4] success) {
-        assert(_msg_value == 0);
+        if (_msg_value != 0) { return [uint256(0), 0, 0, 0]; }
 
-        if ( gameID < 0 || gameID >= nextGameID ) { return [uint256(0), 0, 0, 0]; }
+        uint256[4] memory _fail = [uint256(1), 0, 0, 0];
+
+        if ( gameID < 0 || gameID >= nextGameID ) { return _fail; }
         
         Game storage game = montyStruct[gameID];
         
-        if ( game.lifecycleStep != 5 ) { return [uint256(0), 0, 0, 0]; }
-        if ( hatchTriggered ) { return [uint256(0), 0, 0, 0]; }
-        if ( game.winner != 1 && game.winner != 2 ) { return [uint256(0), 0, 0, 0]; }
+        if ( game.lifecycleStep != 5 ) { return _fail; }
+        if ( hatchTriggered ) { return _fail; }
+        if ( game.winner != 1 && game.winner != 2 ) { return _fail; }
 
         uint256 val;
 
@@ -251,26 +259,28 @@ contract MontyHall {
     }
     
     function EscapeHatch(address _sender, uint256 _msg_value) returns (bool[2] success) {
-        assert(_msg_value == 0);
+        if (_msg_value != 0) { return [false, false]; }
 
-        if ( _sender != creator ) { return [false, false]; }
+        if ( _sender != creator ) { return [true, false]; }
         
         hatchTriggered = true;
         return [true, true];
     }
     
     function RefundInactive(address _sender, uint256 _msg_value, int128 gameID) returns (uint256[4] success) {
-        assert(_msg_value == 0);
+        if (_msg_value != 0) { return [uint256(0), 0, 0, 0]; }
 
-        if ( gameID < 0 || gameID >= nextGameID ) { return [uint256(0), 0, 0, 0]; }
+        uint256[4] memory _fail = [uint256(1), 0, 0, 0];
+
+        if ( gameID < 0 || gameID >= nextGameID ) { return _fail; }
         
         Game storage game = montyStruct[gameID];
         
-        if ( hatchTriggered ) { return [uint256(0), 0, 0, 0]; }
-        if ( (block.number - game.lastAction) <= 14400 ) { return [uint256(0), 0, 0, 0]; }
-        if ( game.lifecycleStep < 1 || game.lifecycleStep > 4 ) { return [uint256(0), 0, 0, 0]; }
-        if ( game.lifecycleStep % 2 == 1 && _sender != game.houseAcct ) { return [uint256(0), 0, 0, 0]; }
-        if ( game.lifecycleStep % 2 == 0 && _sender != game.contestantAcct ) { return [uint256(0), 0, 0, 0]; }
+        if ( hatchTriggered ) { return _fail; }
+        if ( (block.number - game.lastAction) <= 14400 ) { return _fail; }
+        if ( game.lifecycleStep < 1 || game.lifecycleStep > 4 ) { return _fail; }
+        if ( game.lifecycleStep % 2 == 1 && _sender != game.houseAcct ) { return _fail; }
+        if ( game.lifecycleStep % 2 == 0 && _sender != game.contestantAcct ) { return _fail; }
 
         uint256 val = game.bet + game.reward + game.deposit;
         game.bet = 0;
@@ -281,14 +291,16 @@ contract MontyHall {
     }
     
     function RefundAfterEscapeHatch(address _sender, uint256 _msg_value, int128 gameID) returns (uint256[4] success) {
-        assert(_msg_value == 0);
+        if (_msg_value != 0) { return [uint256(0), 0, 0, 0]; }
 
-        if ( gameID < 0 || gameID >= nextGameID ) { return [uint256(0), 0, 0, 0]; }
+        uint256[4] memory _fail = [uint256(1), 0, 0, 0];
+
+        if ( gameID < 0 || gameID >= nextGameID ) { return _fail; }
         
         Game storage game = montyStruct[gameID];
         
-        if ( !hatchTriggered ) { return [uint256(0), 0, 0, 0]; }
-        if ( _sender != game.houseAcct && _sender != game.contestantAcct ) { return [uint256(0), 0, 0, 0]; }
+        if ( !hatchTriggered ) { return _fail; }
+        if ( _sender != game.houseAcct && _sender != game.contestantAcct ) { return _fail; }
 
         uint256 val;
 

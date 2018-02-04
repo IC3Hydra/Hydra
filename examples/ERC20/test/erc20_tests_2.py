@@ -95,7 +95,7 @@ class TestERC20Flo(PyEthereumTestCase):
         self.assertTrue(self.c.withdraw(500, sender=self.t.k0),
                         "Withdraw did not work")
 
-        self.check_logs([log_sigs['Transfer'],bytes_to_int(self.t.a0),0],
+        self.check_logs([log_sigs['Transfer'], bytes_to_int(self.t.a0), 0],
                         int_to_bytes(500))
 
         self.assertEqual(self.c.balanceOf(self.t.a0), 100,
