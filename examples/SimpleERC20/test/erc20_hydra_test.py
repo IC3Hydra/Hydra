@@ -19,7 +19,7 @@ def deploy_erc20_mc(_tester, chain):
         PATH_TO_HEADS + 'ERC20_solidity_1.sol',
         PATH_TO_HEADS + 'ERC20_solidity_2.sol',
         PATH_TO_HEADS + 'ERC20_serpent.se',
-        PATH_TO_HEADS + 'ERC20_viper.vy',
+        PATH_TO_HEADS + 'ERC20_vyper.vy',
         ]
 
     pyeth_deploy = PyEthereumHydraDeployment(chain,

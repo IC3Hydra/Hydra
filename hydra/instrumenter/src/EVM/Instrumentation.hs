@@ -1062,7 +1062,7 @@ procReturn = Procedure "return" [V "offset", V "size"] Ø
 procInit :: Procedure
 procInit = Procedure "init" [] (S [])
     [ TagJumpdest "init"            ⤳ S [Ret]
-    -- Require that caller is mc or self (viper uses CALL even for contract-internal calls)
+    -- Require that caller is mc or self (vyper uses CALL even for contract-internal calls)
     , CALLER                        ⤳ S [N "caller", Ret]
     , ProcedureCall "mc_address"    ⤳ S [N "mc_address", V "caller", Ret]
     , EQ                            ⤳ S [N "mc == caller", Ret]

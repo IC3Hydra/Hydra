@@ -1,5 +1,5 @@
-# Requires Python 3.6, Viper, and pyethereum dependencies
-# Manually verified for full branch/decision, statement coverage (on Viper contract)
+# Requires Python 3.6, Vyper, and pyethereum dependencies
+# Manually verified for full branch/decision, statement coverage (on Vyper contract)
 # Author: Philip Daian (contributions from Florian Tramer, Lorenz Breidenbach)
 
 import unittest
@@ -336,21 +336,21 @@ class TestERC20(PyEthereumTestCase):
         self.check_logs([self.transfer_topic, bytes_to_int(ext2.address), 0], (2).to_bytes(32, byteorder='big'))
 
 
-class TestViperERC20(TestERC20):
+class TestVyperERC20(TestERC20):
 
     @classmethod
     def setUpClass(cls):
-        super(TestViperERC20, cls).setUpClass()
+        super(TestVyperERC20, cls).setUpClass()
 
-        from viper import compiler
-        cls.t.languages['viper'] = compiler.Compiler()
+        from vyper import compiler
+        cls.t.languages['vyper'] = compiler.Compiler()
         with open(PATH_TO_CONTRACTS + '/ERC20.v.py') as fd:
             contract_code = fd.read()
-        cls.c = cls.s.contract(contract_code, language='viper')
+        cls.c = cls.s.contract(contract_code, language='vyper')
         # Bad version of contract where totalSupply / num_issued never gets updated after init
         # (required for full decision/branch coverage)
         bad_code = contract_code.replace("self.num_issued = num256_add(self.num_issued, _value)", "p:num = 5")
-        cls.c_bad = cls.s.contract(bad_code, language='viper')
+        cls.c_bad = cls.s.contract(bad_code, language='vyper')
 
         cls.initial_state = cls.s.snapshot()
         cls.strict_log_mode = True
@@ -400,7 +400,7 @@ class TestSolidity1ERC20(TestERC20):
     def setUpClass(cls):
         super(TestSolidity1ERC20, cls).setUpClass()
 
-        with open(PATH_TO_CONTRACTS + '/nonviper/ERC20_solidity_1.sol') as fd:
+        with open(PATH_TO_CONTRACTS + '/nonvyper/ERC20_solidity_1.sol') as fd:
             contract_code = fd.read()
         cls.c = cls.s.contract(contract_code, language='solidity')
 
@@ -417,7 +417,7 @@ class TestSerpentERC20(TestERC20):
     def setUpClass(cls):
         super(TestSerpentERC20, cls).setUpClass()
 
-        with open(PATH_TO_CONTRACTS + '/nonviper/ERC20_serpent.se') as fd:
+        with open(PATH_TO_CONTRACTS + '/nonvyper/ERC20_serpent.se') as fd:
             contract_code = fd.read()
         cls.c = cls.s.contract(contract_code, language='serpent')
 
@@ -434,7 +434,7 @@ class TestSolidity2ERC20(TestERC20):
     def setUpClass(cls):
         super(TestSolidity2ERC20, cls).setUpClass()
 
-        with open(PATH_TO_CONTRACTS + '/nonviper/ERC20_solidity_2.sol') as fd:
+        with open(PATH_TO_CONTRACTS + '/nonvyper/ERC20_solidity_2.sol') as fd:
             contract_code = fd.read()
         cls.c = cls.s.contract(contract_code, language='solidity')
 
@@ -448,7 +448,7 @@ class TestSolidity2ERC20(TestERC20):
 def load_tests(loader, tests, pattern):
     full_suite = unittest.TestSuite()
 
-    for suite in [TestViperERC20, TestSolidity1ERC20, TestSolidity2ERC20, TestSerpentERC20]:
+    for suite in [TestVyperERC20, TestSolidity1ERC20, TestSolidity2ERC20, TestSerpentERC20]:
         tests = loader.loadTestsFromTestCase(suite)
         full_suite.addTests(tests)
     return full_suite

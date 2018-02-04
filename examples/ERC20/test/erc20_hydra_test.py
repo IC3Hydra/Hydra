@@ -25,9 +25,9 @@ config_string = ':trace'
 def deploy_erc20_mc(_tester, chain):
     mc_path = META_CONTRACT
     head_files = [
-        PATH_TO_CONTRACTS + '/nonviper/ERC20_solidity_1.sol',
-        PATH_TO_CONTRACTS + '/nonviper/ERC20_solidity_2.sol',
-        PATH_TO_CONTRACTS + '/nonviper/ERC20_serpent.se',
+        PATH_TO_CONTRACTS + '/nonvyper/ERC20_solidity_1.sol',
+        PATH_TO_CONTRACTS + '/nonvyper/ERC20_solidity_2.sol',
+        PATH_TO_CONTRACTS + '/nonvyper/ERC20_serpent.se',
         PATH_TO_CONTRACTS + '/ERC20.v.py'
         ]
 

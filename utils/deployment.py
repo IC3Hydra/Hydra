@@ -13,8 +13,8 @@ from subprocess import check_output, check_call
 languages = {
     '.sol': 'solidity',
     '.se': 'serpent',
-    '.vy': 'viper',
-    '.py': 'viper' # hack to handle new .v.py suggested Viper extension
+    '.vy': 'vyper',
+    '.py': 'vyper' # hack to handle new .v.py suggested Vyper extension
 }
 
 

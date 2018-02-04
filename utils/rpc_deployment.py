@@ -52,9 +52,9 @@ class RPCHydraDeployment(HydraDeployment):
             print("COMPILED {}...".format(language))
 
             return contracts[0], abi
-        elif language == 'viper':
+        elif language == 'vyper':
             print("COMPILED {}...".format(language))
-            return check_output(['viper', '/tmp/1'],
+            return check_output(['vyper', '/tmp/1'],
                                 input=code.encode('utf-8')), abi
         elif language == 'serpent':
             print("COMPILED {}...".format(language))
@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
     assert args.p ^ args.f ^ args.l
 
-    heads = ['examples/ERC20/ERC20.v.py'] + ['examples/ERC20/nonviper/' + file
+    heads = ['examples/ERC20/ERC20.v.py'] + ['examples/ERC20/nonvyper/' + file
              for file in ('ERC20_serpent.se', 'ERC20_solidity_1.sol', 'ERC20_solidity_2.sol')]
 
     if args.p:

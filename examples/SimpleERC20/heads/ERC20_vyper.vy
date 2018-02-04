@@ -4,7 +4,7 @@
 # The use of the num256 datatype as in this token is not
 # recommended, as it can pose security risks.
 
-# Events are not yet supported in Viper, so events are NOT
+# Events are not yet supported in Vyper, so events are NOT
 # included in this token.  This makes this token incompatible
 # with some log-only clients.
 
