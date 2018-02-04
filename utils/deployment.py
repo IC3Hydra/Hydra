@@ -325,6 +325,9 @@ class HydraDeployment(metaclass=ABCMeta):
             assert byte_code[start_pos: start_pos + len(swarm_start)] == swarm_start
             byte_code = byte_code[:start_pos]
 
+
+        self.logger.debug("Byte code length before instrumentation: {}".format(len(byte_code)/2))
+
         # run the instrumenter
         cmd = "1sthead" if first_head else "nthhead"
         byte_code = check_output(["stack", "exec", "instrumenter-exe",
@@ -332,6 +335,8 @@ class HydraDeployment(metaclass=ABCMeta):
                                   "0x{}".format(utils.encode_hex(mc_address)),
                                   "{}".format(byte_code)],
                                  cwd=self.INSTRUMENTER_PATH).strip()
+
+        self.logger.debug("Byte code length after instrumentation: {}".format(len(byte_code)/2))
 
         return utils.decode_hex(byte_code)
 
