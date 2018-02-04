@@ -1,5 +1,7 @@
 # The Hydra ALPHA
 
+[![Build Status](https://travis-ci.org/IC3Hydra/Hydra.svg?branch=master)](https://travis-ci.org/IC3Hydra/Hydra)
+
 The Hydra is an [Ethereum](https://ethereum.org) contract development framework for: 
 
 - decentralized security and bug bounties
