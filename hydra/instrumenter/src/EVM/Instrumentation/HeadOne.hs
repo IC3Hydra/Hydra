@@ -20,7 +20,6 @@ instrumentOps :: Integer -> [OpcodePlus] -> [OpcodePlus]
 instrumentOps mc = concatMap aux
     where aux (Op STOP)         = [ Push 0, Op $ DUP 1, Push 1
                                   -- [success == 1, 0, 0]
-                                  , Push 314159265358979, Op $ POP
                                   , ProcedureCall $ procTag "done"
                                   -- Control never reaches this point
                                   ]
