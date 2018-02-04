@@ -216,17 +216,21 @@ compStmt iss oss tagpre = aux
                           else error $ printf "Can't assign %s. Doesn't exist." s
           aux (Discard e) = (iss, compExpr ss e ++ [Op $ POP])
           aux (Nest s) = (iss, compScope ss (tagpre ++ "_scope") s)
+          aux (IfElse e s1 (Scope [])) = (iss,  compExpr ss (Iszero e)
+                                             ++ [TagJumpi $ label "endif"]
+                                             ++ compScope ss (tagpre ++ "_ifscope") s1
+                                             ++ [TagJumpdest $ label "endif"])
           aux (IfElse e s1 s2) = (iss,  compExpr ss e
                                      ++ [TagJumpi $ label "if"]
                                      ++ compScope ss (tagpre ++ "_elsescope") s2
-                                     ++ [Push 1, TagJumpi $ label "endif", TagJumpdest $ label "if"]
+                                     ++ [TagJump $ label "endif", TagJumpdest $ label "if"]
                                      ++ compScope ss (tagpre ++ "_ifscope") s1
                                      ++ [TagJumpdest $ label "endif"])
           aux (While e s) = (iss,  [TagJumpdest $ label "while"]
                                 ++ compExpr ss e
                                 ++ [Op ISZERO, TagJumpi $ label "endwhile"]
                                 ++ compScope ss (tagpre ++ "_whilescope") s
-                                ++ [Push 1, TagJumpi $ label "while", TagJumpdest $ label "endwhile"])
+                                ++ [TagJump $ label "while", TagJumpdest $ label "endwhile"])
           aux (Calldatacopy e1 e2 e3) = (iss, compStmtAuxn ss CALLDATACOPY [e1, e2, e3])
           aux (Returndatacopy e1 e2 e3) = (iss, compStmtAuxn ss RETURNDATACOPY [e1, e2, e3])
           aux (Mstore e1 e2) = (iss, compStmtAuxn ss MSTORE [e1, e2])
