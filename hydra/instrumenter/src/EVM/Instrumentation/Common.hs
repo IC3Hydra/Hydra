@@ -49,10 +49,14 @@ procReturndataload = Proc "returndataload" ["offset"] "data" (Scope
                      ,(Mstore (Lit 0x00) (Var "backup"))
                      ])
 
+-- Note that the precompile "destroys" the returndata buffer since it issues a CALL
+-- For small amounts of data the assembly memcpy is cheaper:
+-- https://github.com/ethereum/solidity/pull/1468
 memcpyPrecomp e1 e2 e3 = (Discard (ProcCall "memcpyPrecomp" [e1, e2, e3]))
 procMemcpyPrecomp = Proc "memcpyPrecomp" ["dst", "src", "size"] "_" (Scope
                     [(checkOrDie (Call Gas (Lit 0x4) (Lit 0) (Var "src") (Var "size") (Var "dst") (Var "size")))])
 
+-- TODO(lorenzb): This may cause an msize increase if used at the very end of the memory range.
 memcpyNoalias e1 e2 e3 = (Discard (ProcCall "memcpyNoalias" [e1, e2, e3]))
 procMemcpyNoalias = Proc "memcpyNoalias" ["dst", "src", "size"] "_" (Scope
                     [While (M.geq (Var "size") (Lit 0x20))
