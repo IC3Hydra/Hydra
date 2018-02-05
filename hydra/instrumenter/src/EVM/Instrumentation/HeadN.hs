@@ -107,8 +107,7 @@ instrumentOps mc = concatMap aux
 
 -- TODO(lorenzb): fix order
 procs :: Integer -> [Proc]
-procs mc = [ procMemcpyPrecomp
-           , procMemcpyNoalias
+procs mc = [ procMemcpyNoalias
            , procMin
            , procLog0
            , procLog1
