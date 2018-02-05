@@ -131,7 +131,7 @@ procs mc = [ procMemcpyPrecomp
            , procOffsetMem memoryMOffset
            ]
 
--- TODO(lorenzb): Instrument msize, since the instrumentation may increase it.
+-- TODO(lorenzb): Ensure that instrumentation never increases MSIZE
 
 -- TODO(lorenzb): Unify constants between heads
 tracePtrMOffset :: Integer

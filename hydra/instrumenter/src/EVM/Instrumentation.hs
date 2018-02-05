@@ -40,16 +40,6 @@ instrument instrumentOps procs mc contract =
                          ++ cps
                          ++ jt
        lower contract'''
-    -- do let ps = procs mc
-    --    sequence_ $ map (\p@(Procedure name _ _ _) -> (showError . consError name . checkProcedure ps) p) ps
-    --    showError . checkInstrumentable $ contract
-    --    let (contract', pcs2tags) = lift contract
-    --    let jt = jumptable pcs2tags
-    --    let contract'' = instrumentOps mc contract'
-    --    let checkableContract = InstrumentedContract ps jt contract''
-    --    let contract''' = link checkableContract
-    --    lower contract'''
-
 
 checkInstrumentable :: [Opcode] -> Either (Int, String) ()
 checkInstrumentable ops = checkForbidden ops >> checkPC ops
@@ -92,23 +82,21 @@ jumpTreeCode jt = begin ++ aux jt
           aux Empty = []
           aux n@(Node i t j1 j2) = concat [ aux j1
                                           , aux j2
-                                          , -- fromRight . consError "jumptree" . checkOps [] $
-                                          [ TagJumpdest (tag n) -- ⤳ S [V "old destination"]
-                                          , Op $ DUP 1               -- ⤳ S [V "old destination", V "old destination"]
-                                          , Push i              -- ⤳ S [N "potential old destination", V "old destination", V "old destination"]
-                                          , Op $ GT                  -- ⤳ S [N "old destination < potential old destination", V "old destination"]
-                                          , TagJumpi (tag j1)   -- ⤳ S [V "old destination"]
-                                          , Op $ DUP 1               -- ⤳ S [V "old destination", V "old destination"]
-                                          , Push i              -- ⤳ S [N "potential old destination", V "old destination", V "old destination"]
-                                          , Op $ LT                  -- ⤳ S [N "potential old destination < old destination", V "old destination"]
-                                          , TagJumpi (tag j2)   -- ⤳ S [V "old destination"]
-                                          , Op $ POP                 -- ⤳ S []
-                                          , TagJump t           -- ⤳ Ø
+                                          , [ TagJumpdest (tag n) -- [old destination]
+                                            , Op $ DUP 1          -- [old destination, old destination]
+                                            , Push i              -- [potential old destination, old destination, old destination]
+                                            , Op $ GT             -- [old destination < potential old destination, old destination]
+                                            , TagJumpi (tag j1)   -- [old destination]
+                                            , Op $ DUP 1          -- [old destination, old destination]
+                                            , Push i              -- [potential old destination, old destination, old destination]
+                                            , Op $ LT             -- [potential old destination < old destination, old destination]
+                                            , TagJumpi (tag j2)   -- [old destination]
+                                            , Op $ POP            -- []
+                                            , TagJump t
+                                            ]
                                           ]
-                                          ]
-          begin = -- fromRight . consError "jumptable begin" . checkOps [] $
-                  [ TagJumpdest "jumptable"      -- ⤳ S [V "old destination"]
-                  , TagJump (tag jt)             -- ⤳ Ø
+          begin = [ TagJumpdest "jumptable" -- [old destination]
+                  , TagJump (tag jt)
                   ]
 
 jumptable :: [(Integer, String)] -> [OpcodePlus]

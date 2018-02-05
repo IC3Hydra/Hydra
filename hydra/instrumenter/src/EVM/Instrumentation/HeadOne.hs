@@ -11,11 +11,6 @@ import           Prelude          hiding (EQ, GT, LT)
 import           Text.Printf
 import           Util
 
-
--- M[0x00] contains location where actual memory starts mem_start
--- i.e. M[mem_start] contains the first byte of actual memory
--- M[0x100] contains the size of the trace
-
 instrumentOps :: Integer -> [OpcodePlus] -> [OpcodePlus]
 instrumentOps mc = concatMap aux
     where aux (Op STOP)         = [ Push 0, Op $ DUP 1, Push 1
@@ -155,16 +150,6 @@ traceSize = (Sub getTracePtr (Lit traceMOffset))
 backup e1 e2 = (memcpyNoalias (Lit backupMOffset) e1 e2)
 
 restore e1 e2 = (memcpyNoalias e1 (Lit backupMOffset) e2)
-
--- memoryStashSize = 0x20 * 200
-
--- backupOffset = 0x20
-
--- maxBackupSize = traceOffset - backupOffset
-
--- traceOffset = 0x20 * 6
-
--- maxTraceSize = memoryStashSize - traceOffset
 
 callMc e1 e2 e3 e4 = (Call Gas (ProcCall "mc" []) (Lit 0) e1 e2 e3 e4)
 

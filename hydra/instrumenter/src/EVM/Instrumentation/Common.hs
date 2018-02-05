@@ -10,6 +10,7 @@ disagreement = 0xd15a9
 revertWord w = Scope [Mstore (Lit 0x00) (Lit w)
                      ,Revert (Lit 0x00) (Lit 0x20)]
 
+-- TODO(lorenzb): Make an Error type instead
 errorReentrancy = 0x1337c0ffee00000001
 errorTODO       = 0x1337c0ffee00000002
 errorAssert     = 0x1337c0ffee00000003

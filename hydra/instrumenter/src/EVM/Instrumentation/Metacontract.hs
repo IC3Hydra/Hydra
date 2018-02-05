@@ -174,5 +174,3 @@ mc = Scope [(Let "head_address" (ProcCall "headAddress" [(Lit 0)]))
                  (Scope [(IfElse (Eq Caller Address)
                               (Scope [(Discard (ProcCall "inner" []))])
                               (Scope [(Discard (ProcCall "outer" []))]))]))]
---           ,(if_ (Eq (Lit mutexOn) (Sload slocMutex)) (Scope (crash errorReentrancy)))
---           ,(Sstore (Lit slocMutex) (Lit mutexOn))

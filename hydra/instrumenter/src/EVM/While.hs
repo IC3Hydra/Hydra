@@ -1,16 +1,16 @@
 module EVM.While
-    ( Expr (..)
-    , Stmt (..)
-    , Scope (..)
-    , Proc (..)
-    , compExpr
-    , compStmt
-    , compScope
-    , compProc
-    , compile
-    , compileAndLower
-    , procTag
-    ) where
+( Expr (..)
+, Stmt (..)
+, Scope (..)
+, Proc (..)
+, compExpr
+, compStmt
+, compScope
+, compProc
+, compile
+, compileAndLower
+, procTag
+) where
 
 import Data.Maybe
 import Data.List
@@ -124,9 +124,6 @@ data Scope = Scope [Stmt]
 
 data Proc = Proc String [String] String Scope
     deriving (Show, Eq)
-
--- data Opcode = ADD | MUL | LESS | ISZERO | JUMPI String | JUMPDEST String | PUSH Int | DUP Int | SWAP Int | POP
---     deriving (Show, Eq)
 
 stackIndex :: (Show a, Eq a) => [a] -> a -> Word8
 stackIndex ss s = let i = (justOrError (printf "Unknown stack item %v" $ show s) (elemIndex s ss)) + 1
