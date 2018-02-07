@@ -11,8 +11,11 @@ import           System.Environment
 import           System.Exit
 import           System.IO
 
-parseHexString :: String -> Either String [Opcode]
-parseHexString = parse . hexStringToByteString
+parseHexStringStrict :: String -> Either String [Opcode]
+parseHexStringStrict = parse . hexStringToByteString
+
+parseHexStringLenient :: String -> Either String [Opcode]
+parseHexStringLenient = parseLenient . hexStringToByteString
 
 printErrorAndExit :: (Show a) => Either a b -> IO b
 printErrorAndExit (Left x)  = do hPutStrLn stderr $ show x
@@ -33,16 +36,17 @@ parseAddress s = do let s' = map toLower $ leftpad 40 '0' $ if "0x" == take 2 s 
 
 -- TODO(lorenzb): Fix help text
 run :: [String] -> IO ()
-run ["disasm", contract] = either (hPutStrLn stderr) (putStrLn . unlines . map show) . parseHexString $ contract
+run ["disasmStrict", contract] = either (hPutStrLn stderr) (putStrLn . unlines . map show) . parseHexStringStrict $ contract
+run ["disasmLenient", contract] = either (hPutStrLn stderr) (putStrLn . unlines . map show) . parseHexStringLenient $ contract
 run ("metacontract" : head1 : heads) = do headaddrs <- sequence $ map (printErrorAndExit . parseAddress) (head1:heads)
                                           let mc = metacontract headaddrs
                                           putStrLn . byteStringToHexString . assemble $ genericInitcode ++ mc
 run ["1sthead", mc, contract] = do mcaddr <- printErrorAndExit $ parseAddress mc
-                                   parsed <- printErrorAndExit $ parseHexString contract
+                                   parsed <- printErrorAndExit $ parseHexStringLenient contract
                                    instrumented <- printErrorAndExit $ I.instrumentFirst mcaddr parsed
                                    putStrLn . byteStringToHexString . assemble $ genericInitcode ++ instrumented
 run ["nthhead", mc, contract] = do mcaddr <- printErrorAndExit $ parseAddress mc
-                                   parsed <- printErrorAndExit $ parseHexString contract
+                                   parsed <- printErrorAndExit $ parseHexStringLenient contract
                                    instrumented <- printErrorAndExit $ I.instrumentNth mcaddr parsed
                                    putStrLn . byteStringToHexString . assemble $ genericInitcode ++ instrumented
 run _ = do hPutStrLn stderr $ unlines [ "Invalid option. Usage:                                                     "

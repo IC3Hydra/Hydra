@@ -3,6 +3,7 @@ module EVM.Bytecode
     , opcodeToWord8
     , word8ToOpcode
     , EVM.Bytecode.parse
+    , EVM.Bytecode.parseLenient
     , isWellFormed
     , assemble
     , opcodeSize
@@ -222,8 +223,8 @@ opcodeToWord8 CODECOPY       = 0x39
 opcodeToWord8 GASPRICE       = 0x3a
 opcodeToWord8 EXTCODESIZE    = 0x3b
 opcodeToWord8 EXTCODECOPY    = 0x3c
-opcodeToWord8 RETURNDATASIZE = 0x3d 
-opcodeToWord8 RETURNDATACOPY = 0x3e 
+opcodeToWord8 RETURNDATASIZE = 0x3d
+opcodeToWord8 RETURNDATACOPY = 0x3e
 opcodeToWord8 BLOCKHASH      = 0x40
 opcodeToWord8 COINBASE       = 0x41
 opcodeToWord8 TIMESTAMP      = 0x42
@@ -272,11 +273,23 @@ integerToBytes l i = reverse $ Prelude.take (fromIntegral l) (aux i ++ repeat 0)
 parserOpcode :: Parser Opcode
 parserOpcode = do w <- anyWord8
                   case word8ToOpcode w of
-                      (PUSH n _) -> (PUSH n . bytestringToInteger) <$> Data.Attoparsec.ByteString.take (fromIntegral  n)
+                      (PUSH n _) -> try ((PUSH n . bytestringToInteger) <$> Data.Attoparsec.ByteString.take (fromIntegral  n))
                       o          -> return o
+
+parserInvalidEnd :: Parser Opcode
+parserInvalidEnd = do takeWhile1 (const True)
+                      return (Unknown 0xfe)
+
 
 parserProgram :: Parser [Opcode]
 parserProgram = many parserOpcode <* endOfInput
+
+parserProgramLenient :: Parser [Opcode]
+parserProgramLenient = do program <- many parserOpcode
+                          suffix <- option [] ((\x -> [x]) <$> parserInvalidEnd)
+                          endOfInput
+                          return (program ++ suffix)
+
 
 pairs :: [a] -> [(a,a)]
 pairs []        = []
@@ -310,6 +323,9 @@ byteStringToHexString = concatMap (printf "%02x") . unpack
 
 parse :: ByteString -> Either String [Opcode]
 parse = parseOnly parserProgram
+
+parseLenient :: ByteString -> Either String [Opcode]
+parseLenient = parseOnly parserProgramLenient
 
 assemble :: [Opcode] -> ByteString
 assemble ops = if isWellFormed ops

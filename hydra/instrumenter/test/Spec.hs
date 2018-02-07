@@ -42,6 +42,7 @@ qcProps = testGroup "(byte code)"
     [ QC.testProperty "word8ToOpcodeInverse" prop_word8ToOpcodeInverse
     , QC.testProperty "opcodeToWord8Inverse" prop_opcodeToWord8Inverse
     , QC.testProperty "parseInverse" prop_parseInverse
+    , QC.testProperty "parseLenientInverse" prop_parseLenientInverse
     , QC.testProperty "assembleInverse" prop_assembleInverse
     , QC.testProperty "hexStringToByteStringInverse" prop_hexStringToByteStringInverse
     , QC.testProperty "instrumentFirstRuns" prop_instrumentFirstRuns
@@ -61,6 +62,15 @@ prop_parseInverse b = isRight parsed ==> b == (assemble . fromRight) parsed
     where parsed = parse b
           isRight = either (const False) (const True)
           fromRight = either (error "Left") id
+
+prop_parseLenientInverse :: ByteString.ByteString -> Bool
+prop_parseLenientInverse b | parsed == [] = ByteString.empty == b
+                           | last parsed == Unknown 0xfe = (assemble . init) parsed `isLongPrefix` b
+                           | otherwise = b == assemble parsed
+    where parsed = fromRight (parseLenient b)
+          isRight = either (const False) (const True)
+          fromRight = either (error "Left") id
+          isLongPrefix xs ys = xs == ByteString.take (ByteString.length xs) ys && ByteString.length xs + 32 >= ByteString.length ys
 
 prop_assembleInverse :: [BC.Opcode] -> Bool
 prop_assembleInverse ops =
