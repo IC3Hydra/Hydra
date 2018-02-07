@@ -302,7 +302,7 @@ class HydraDeployment(metaclass=ABCMeta):
 
     #     return utils.decode_hex(byte_code)
 
-    def instrument_head(self, first_head, code, language, mc_address, run_constructor=True, detect_swarm=False, write_stderr_to=None):
+    def instrument_head(self, first_head, code, language, mc_address, run_constructor=True, detect_swarm=False, write_stderr_to=None, code_id=""):
         """
         Instruments a contract's bytecode to enable interaction with the Hydra
         Meta Contract
@@ -348,7 +348,7 @@ class HydraDeployment(metaclass=ABCMeta):
         byte_code = byte_code.strip()
         if std_err is not None and len(std_err) > 0 and write_stderr_to is not None:
             with open(write_stderr_to, "a") as f:
-                f.write(str(std_err) + "\n")
+                f.write(str(code_id) + "~" + str(std_err) + "\n")
 
         self.logger.debug("Byte code length after instrumentation: {}".format(len(byte_code)/2))
 
