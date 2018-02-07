@@ -41,14 +41,16 @@ instrument instrumentOps procs mc contract =
                          ++ jt
        lower contract'''
 
-checkInstrumentable :: [Opcode] -> Either (Int, String) ()
-checkInstrumentable ops = checkForbidden ops >> checkPC ops
-    where checkForbidden = sequence_ . zipWith (\n op ->
-                               if op `elem` forbidden
-                               then Left (n, show op ++ " is a forbidden operation. Cannot instrument.")
-                               else Right ()) [1..]
+checkInstrumentable :: [Opcode] -> Either [(Int, String)] ()
+checkInstrumentable ops = case errors of {[] -> Right (); _ -> Left errors}
+    where errors = catMaybes $ findForbidden ops ++ checkPC ops
+          findForbidden :: [Opcode] -> [Maybe (Int, String)]
+          findForbidden = zipWith (\n op ->
+                                       if op `elem` forbidden
+                                       then Just (n, show op ++ " is a forbidden operation. Cannot instrument.")
+                                       else Nothing) [1..]
           forbidden = [ CODESIZE, CODECOPY
-                      --, EXTCODESIZE
+                      , EXTCODESIZE
                       , EXTCODECOPY
                       , CREATE, CALLCODE
                       , DELEGATECALL, SUICIDE
@@ -56,13 +58,14 @@ checkInstrumentable ops = checkForbidden ops >> checkPC ops
                       , STATICCALL, RETURNDATACOPY, RETURNDATASIZE
                       -- TODO(lorenzb): Deal with REVERT properly
                       ]
-          checkPC [] = Right ()
-          checkPC [PC] = Left (1, "PC not follwed by JUMP/JUMPI is a forbidden operation. Cannot instrument.")
-          checkPC (op:ops) = sequence_ (zipWith3 aux [1..] (op:ops) ops)
-          aux n PC JUMP = Right ()
-          aux n PC JUMPI = Right ()
-          aux n PC _ = Left (n, "PC not follwed by JUMP/JUMPI is a forbidden operation. Cannot instrument.")
-          aux n _ _ = Right()
+          checkPC :: [Opcode] -> [Maybe (Int, String)]
+          checkPC []   = [Nothing]
+          checkPC [PC] = [Just (1, "PC not follwed by JUMP/JUMPI is a forbidden operation. Cannot instrument.")]
+          checkPC (op:ops) = zipWith3 aux [1..] (op:ops) ops
+          aux n PC JUMP = Nothing
+          aux n PC JUMPI = Nothing
+          aux n PC _ = Just (n, "PC not follwed by JUMP/JUMPI is a forbidden operation. Cannot instrument.")
+          aux n _ _ = Nothing
 
 data JumpTree = Empty | Node Integer String JumpTree JumpTree deriving (Show, Eq)
 
