@@ -301,14 +301,17 @@ class HydraDeployment(metaclass=ABCMeta):
 
     #     return utils.decode_hex(byte_code)
 
-    def instrument_head(self, first_head, code, language, mc_address):
+    def instrument_head(self, first_head, code, language, mc_address, run_constructor=True, detect_swarm=False):
         """
         Instruments a contract's bytecode to enable interaction with the Hydra
         Meta Contract
         """
 
         # run the constructor to extract the contract's code
-        byte_code = self.run_constructor(code, language)
+        if run_constructor:
+            byte_code = self.run_constructor(code, language)
+        else:
+            byte_code = code
 
         # Solidity appends a swarm at the end of the compiled code. Remove it!
         # The format is [swarm_start Hash(64) swarm_end]
@@ -324,6 +327,10 @@ class HydraDeployment(metaclass=ABCMeta):
             assert byte_code[end_pos:] == swarm_end
             assert byte_code[start_pos: start_pos + len(swarm_start)] == swarm_start
             byte_code = byte_code[:start_pos]
+
+        if detect_swarm:
+            if (byte_code[end_pos:] == swarm_end) and (byte_code[start_pos: start_pos + len(swarm_start)] == swarm_start):
+                byte_code = byte_code[:start_pos]
 
 
         self.logger.debug("Byte code length before instrumentation: {}".format(len(byte_code)/2))

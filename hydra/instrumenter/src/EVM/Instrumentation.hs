@@ -48,7 +48,8 @@ checkInstrumentable ops = checkForbidden ops >> checkPC ops
                                then Left (n, show op ++ " is a forbidden operation. Cannot instrument.")
                                else Right ()) [1..]
           forbidden = [ CODESIZE, CODECOPY
-                      , EXTCODESIZE, EXTCODECOPY
+                      --, EXTCODESIZE
+                      , EXTCODECOPY
                       , CREATE, CALLCODE
                       , DELEGATECALL, SUICIDE
                       -- Metropolis opcodes

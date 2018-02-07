@@ -12,6 +12,7 @@ from ethereum.slogging import configure_logging
 config_string = ':trace'
 #configure_logging(config_string=config_string)
 
+
 def deploy_montyhall_mc(_tester, chain):
     mc_path = META_CONTRACT
     head_files = [

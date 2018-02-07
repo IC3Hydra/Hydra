@@ -1,6 +1,7 @@
 import unittest
 from ethereum import utils
 import types
+import os
 
 from utils.pyethereum_test_utils import PyEthereumHydraDeployment
 from utils.deployment import get_contract_translator, kall
@@ -13,7 +14,7 @@ config_string = ':trace'
 #configure_logging(config_string=config_string)
 
 
-def deploy_erc20_mc(_tester, chain):
+def deploy_erc20_mc(_tester, chain, num_heads=None):
     mc_path = META_CONTRACT
     head_files = [
         PATH_TO_HEADS + 'ERC20_solidity_1.sol',
@@ -21,6 +22,16 @@ def deploy_erc20_mc(_tester, chain):
         PATH_TO_HEADS + 'ERC20_serpent.se',
         PATH_TO_HEADS + 'ERC20_vyper.vy',
         ]
+
+    if num_heads is None:
+        num_heads = len(head_files)
+    else:
+        num_heads = int(num_heads)
+
+    if num_heads < len(head_files):
+        head_files = head_files[:num_heads]
+    elif num_heads > len(head_files):
+        head_files.extend([head_files[0]] * (num_heads - len(head_files)))
 
     pyeth_deploy = PyEthereumHydraDeployment(chain,
                                              _tester.k0, _tester.a0,
@@ -102,7 +113,8 @@ class TestGasCosts(erc20_test_gas_costs.TestGasCosts):
 
         cls.s.head_state.gas_limit = 10**80
 
-        c, heads, ct = deploy_erc20_mc(cls.t, cls.s)
+        num_heads = os.environ.get('NUM_HEADS')
+        c, heads, ct = deploy_erc20_mc(cls.t, cls.s, num_heads=num_heads)
         cls.c = c
         cls.heads = heads
         cls.ignore_logs = True
