@@ -56,7 +56,6 @@ checkInstrumentable ops = case errors of {[] -> Right (); _ -> Left errors}
                       , DELEGATECALL, SUICIDE
                       -- Metropolis opcodes
                       , STATICCALL, RETURNDATACOPY, RETURNDATASIZE
-                      -- TODO(lorenzb): Deal with REVERT properly
                       ]
           checkPC :: [Opcode] -> [Maybe (Int, String)]
           checkPC []   = [Nothing]
