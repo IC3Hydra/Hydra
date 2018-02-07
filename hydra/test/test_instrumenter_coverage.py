@@ -14,7 +14,7 @@ latest_block = -1
 
 def crawl(start_block, end_block, blockpath):
 
-    block_file_out_path = blockpath + os.sep + str(start_block) + "_" + str("end_block")
+    block_file_out_path = blockpath + os.sep + str(start_block) + "_" + str(end_block)
 
     t = tester
     s = t.Chain()
