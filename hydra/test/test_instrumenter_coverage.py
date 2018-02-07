@@ -57,7 +57,7 @@ def crawl(start_block, end_block, blockpath, thread_id):
                 else:
                     (count, status) = unique_codes[(code,)]
                     unique_codes[(code,)] = (count+1, status)
-        outsummary = "block {} ({}/{} instrumented [thread {}, {}% complete])".format(i, instrumentable, len(unique_codes), thread_id, ((float(i) - start_block) * 100) / (end_block - start_block))
+        outsummary = "block {} ({}/{} instrumented [thread {}, {}% complete])".format(i, instrumentable, len(unique_codes), thread_id, int(((float(i) - start_block) * 100) / (end_block - start_block)))
         print(outsummary)
     open(block_file_out_path, "w").write(str(unique_codes))
 
