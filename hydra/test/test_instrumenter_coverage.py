@@ -51,16 +51,16 @@ def crawl(start_block, end_block, blockpath):
     open(block_file_out_path, "w").write(str(unique_codes))
 
 
-def do_crawl(blockspath):
+def do_crawl(blockspath, batchsize):
     global latest_block
     while True:
         # lock and grab a batch
         # run the batch
         lock.acquire()
         last_block = latest_block
-        latest_block -= 1000
+        latest_block -= batchsize
         lock.release()
-        crawl(last_block - 1000 + 1, last_block, blockspath)
+        crawl(last_block - batchsize + 1, last_block, blockspath)
 
 
 if __name__ == "__main__":
@@ -68,10 +68,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("end", type=int, help="end block")
     parser.add_argument("blockspath", type=str, help="block data files prefix")
-    parser.add_argument("numthreads", type=str, help="number of threads to use")
+    parser.add_argument("numthreads", type=int, help="number of threads to use")
+    parser.add_argument("batchsize", type=int, help="number of blocks to batch together (higher=more caching, slower writes to disk)")
 
     args = parser.parse_args()
 
     latest_block = args.end
 
-    do_crawl(args.blockspath)
+    for i in range(args.numthreads):
+        threading.Thread(target=do_crawl, args=[args.blockspath, args.batchsize], daemon=True).start()
+
+    while latest_block > 0: # nasty polling loop
+        time.sleep(5)
