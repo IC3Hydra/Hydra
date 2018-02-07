@@ -1,13 +1,20 @@
+import requests
 from utils.pyethereum_test_utils import PyEthereumHydraDeployment
 from ethereum import utils
 from ethereum.tools import tester
-import subprocess
+import time
+import threading
+import os
 
 import web3
-w3 = web3.Web3(web3.IPCProvider('/Users/floriantramer/Library/Ethereum/geth.ipc'))
+w3 = web3.Web3(web3.IPCProvider('/home/debian/geth_temp_fast/geth.ipc'))
 
+lock = threading.Lock()
+latest_block = -1
 
-def crawl(end_block):
+def crawl(start_block, end_block, blockpath):
+
+    block_file_out_path = blockpath + os.sep + str(start_block) + "_" + str("end_block")
 
     t = tester
     s = t.Chain()
@@ -16,51 +23,55 @@ def crawl(end_block):
     dep = PyEthereumHydraDeployment(s, t.k0, t.a0, None, None)
     MC_address = utils.decode_hex("1234567890")
     unique_codes = {}
-    unique_instrumentable = 0
+    instrumentable = 0
 
-    all_contracts = 0
-    all_instrumentable = 0
-
-    for i in range(end_block, 0, -1):
-        print("block {} ({}/{} unique instrumented, {}/{} total instrumented)".format(i, unique_instrumentable, len(unique_codes), all_instrumentable, all_contracts))
-
-        block = w3.eth.getBlock(i)
-
+    for i in range(start_block, end_block + 1):
+        block = w3.eth.getBlock(i, full_transactions=True)
         transactions = block['transactions']
         for t in transactions:
-            t = w3.eth.getTransaction(t)
-
-            if t is None:
-                continue
-
             addr = t['to']
             if addr is None:
                 continue
 
             code = w3.eth.getCode(addr)
-
             if code != "0x":
-                all_contracts += 1
-
                 if (code,) not in unique_codes:
-                    try:
-                        dep.instrument_head(True, code[2:], None, MC_address, run_constructor=False, detect_swarm=True)
+                    instrumented_code = dep.instrument_head(True, code[2:], None, MC_address, run_constructor=False, detect_swarm=True, write_stderr_to=block_file_out_path + ".errors")
+                    if len(instrumented_code) == 0:
+                        unique_codes[(code,)] = (1, False)
+                    else:
                         unique_codes[(code,)] = (1, True)
-                        unique_instrumentable += 1
-                        all_instrumentable += 1
-                    except subprocess.CalledProcessError as e:
-                        unique_codes[(code,)] = (1, True)
+                        instrumentable += 1
 
                 else:
                     (count, status) = unique_codes[(code,)]
                     unique_codes[(code,)] = (count+1, status)
-                    if status:
-                        all_instrumentable += 1
+        outsummary = "block {} ({}/{} instrumented)\n".format(i, instrumentable, len(unique_codes))
+        print(outsummary)
+    open(block_file_out_path, "w").write(str(unique_codes))
+
+
+def do_crawl(blockspath):
+    global latest_block
+    while True:
+        # lock and grab a batch
+        # run the batch
+        lock.acquire()
+        last_block = latest_block
+        latest_block -= 1000
+        lock.release()
+        crawl(last_block - 1000 + 1, last_block, blockspath)
+
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("end", type=int, help="end block")
+    parser.add_argument("blockspath", type=str, help="block data files prefix")
+    parser.add_argument("numthreads", type=str, help="number of threads to use")
 
     args = parser.parse_args()
-    crawl(args.end)
+
+    latest_block = args.end
+
+    do_crawl(args.blockspath)
