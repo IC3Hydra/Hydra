@@ -35,7 +35,8 @@ instrument instrumentOps procs mc contract =
        let (contract', pcs2tags) = lift (contract ++ [STOP])
        let jt = jumptable pcs2tags
        let contract'' = instrumentOps mc contract'
-       let contract''' = [ProcedureCall $ procTag "init"]
+       let contract''' = [ProcedureCall $ procTag "init"
+                         , Op POP]
                          ++ contract''
                          ++ cps
                          ++ jt
