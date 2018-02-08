@@ -1,6 +1,8 @@
 import os
 
 BLOCKDATA_PATH = "blocks/"
+END_BLOCK = 5049100
+BATCH_SIZE = 1000
 BAD_OPCODES = ['CODESIZE', 'CODECOPY', 'EXTCODESIZE', 'EXTCODECOPY', 'CREATE', 'CALLCODE', 'DELEGATECALL', 'SUICIDE', 'STATICCALL', 'RETURNDATACOPY', 'RETURNDATASIZE'] # from Instrumentation.hs
 
 error_map = {}
@@ -35,9 +37,10 @@ for filename in os.listdir(BLOCKDATA_PATH):
 
             error_map[error[0]] = contract_errors
 
-for filename in os.listdir(BLOCKDATA_PATH):
-    if not filename.endswith(".errors") and not "ids" in filename:
-        path = os.path.join(BLOCKDATA_PATH, filename)
+for end_block in range(END_BLOCK, 0, 0-BATCH_SIZE):
+    filename = str(end_block - BATCH_SIZE + 1) + "_" + str(end_block)
+    path = os.path.join(BLOCKDATA_PATH, filename)
+    if os.path.exists(path):
         exec("dict = " + open(path).read().strip()) # this is hacky but ah well it works
         for id in dict:
             id = int(id)
@@ -64,7 +67,10 @@ for filename in os.listdir(BLOCKDATA_PATH):
                         num_tx_failures_containing_opcode[opcode] += status[0]
                         average_opcodes_in_containing_contracts[opcode][0] += num_opcodes_in_fail
                         average_opcodes_in_containing_contracts[opcode][1] += 1
+    else:
+        break
 
+print("Processed block range", end_block+1, END_BLOCK)
 print("Num failures", num_failures)
 print("Num tx failures", num_tx_failures)
 print("Num successes", num_successes)
