@@ -57,7 +57,7 @@ instrumentOps mc = concatMap aux
                                   , Op $ MSTORE8
                                   -- []
                                   ]
-          aux (Op SHA3)         = underflowGuard 3 ++
+          aux (Op SHA3)         = underflowGuard 2 ++
                                   [ ProcedureCall $ procTag "sha3"
                                   ]
           aux (Op JUMP)         = [ TagJump "jumptable"
