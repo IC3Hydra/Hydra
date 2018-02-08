@@ -1,8 +1,13 @@
 module EVM.Instrumentation.Common
 where
 
+import EVM.Bytecode
+import EVM.BytecodePlus
 import EVM.While
 import qualified EVM.While.Macros as M
+
+underflowGuard 0 = []
+underflowGuard n = [Op (DUP n), Op POP]
 
 maxPrecompileAddress = 32
 

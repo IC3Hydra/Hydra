@@ -20,7 +20,8 @@ instrumentOps mc = concatMap aux
                                   ]
           aux (Op ADDRESS)      = [ Push mc    -- ⤳ S [N "mc_address"]
                                   ]
-          aux (Op BALANCE)      = [ ProcedureCall $ procTag "balance" -- ⤳ S [N "balance"]
+          aux (Op BALANCE)      = underflowGuard 1 ++
+                                  [ ProcedureCall $ procTag "balance" -- ⤳ S [N "balance"]
                                   ]
           aux (Op CALLER)       = [ Push 0x00           -- ⤳ S [N "0"]
                                   , Op $ CALLDATALOAD     -- ⤳ S [N "calldata[0]"]
@@ -28,33 +29,39 @@ instrumentOps mc = concatMap aux
           aux (Op CALLVALUE)    = [ Push 0x20       -- ⤳ S [N "0x20"]
                                   , Op $ CALLDATALOAD    -- ⤳ S [N "calldata[0x20]"]
                                   ]
-          aux (Op CALLDATALOAD) = [ ProcedureCall $ procTag "calldataload"
+          aux (Op CALLDATALOAD) = underflowGuard 1 ++
+                                  [ ProcedureCall $ procTag "calldataload"
                                   ]
           aux (Op CALLDATASIZE) = [ Op $ CALLDATASIZE           -- ⤳ S [N "calldata size"]
                                   , Push 0x60 -- ⤳ S [N "calldata stash size", V "calldata size"]
                                   , Op $ (SWAP  1)               -- ⤳ S [V "calldata size", V "calldata stash size"]
                                   , Op $ SUB                     -- ⤳ S [N "calldata size - calldata stash size"]
                                   ]
-          aux (Op CALLDATACOPY) = [ ProcedureCall $ procTag "calldatacopy"
+          aux (Op CALLDATACOPY) = underflowGuard 3 ++
+                                  [ ProcedureCall $ procTag "calldatacopy"
                                   , Op $ POP
                                   ]
           -- TODO(lorenzb): All ops that offset memory are vulnerable to overflow (MLOAD, MSTORE, MSTORE8, CALLDATALOAD, ...)
-          aux (Op MLOAD)        = [ ProcedureCall $ procTag "offsetMem"
+          aux (Op MLOAD)        = underflowGuard 1 ++
+                                  [ ProcedureCall $ procTag "offsetMem"
                                   -- [mem_start + offset]
                                   , Op $ MLOAD
                                   -- [M[mem_start + offset]]
                                   ]
-          aux (Op MSTORE)       = [ ProcedureCall $ procTag "offsetMem"
+          aux (Op MSTORE)       = underflowGuard 2 ++
+                                  [ ProcedureCall $ procTag "offsetMem"
                                   -- [mem_start + offset, word]
                                   , Op $ MSTORE
                                   -- []
                                   ]
-          aux (Op MSTORE8)      = [ ProcedureCall $ procTag "offsetMem"
+          aux (Op MSTORE8)      = underflowGuard 2 ++
+                                  [ ProcedureCall $ procTag "offsetMem"
                                   -- [mem_start + offset, byte]
                                   , Op $ MSTORE8
                                   -- []
                                   ]
-          aux (Op SHA3)         = [ ProcedureCall $ procTag "sha3"
+          aux (Op SHA3)         = underflowGuard 2 ++
+                                  [ ProcedureCall $ procTag "sha3"
                                   ]
           aux (Op JUMP)         = [ TagJump "jumptable"
                                   ]
@@ -72,30 +79,38 @@ instrumentOps mc = concatMap aux
                                   , Op $ SUB
                                   -- [msize - mem_start]
                                   ]
-          aux (Op LOG0)         = [ ProcedureCall $ procTag "log0"
+          aux (Op LOG0)         = underflowGuard 2 ++
+                                  [ ProcedureCall $ procTag "log0"
                                   , Op POP
                                   ]
-          aux (Op LOG1)         = [ ProcedureCall $ procTag "log1"
+          aux (Op LOG1)         = underflowGuard 3 ++
+                                  [ ProcedureCall $ procTag "log1"
                                   , Op POP
                                   ]
-          aux (Op LOG2)         = [ ProcedureCall $ procTag "log2"
+          aux (Op LOG2)         = underflowGuard 4 ++
+                                  [ ProcedureCall $ procTag "log2"
                                   , Op POP
                                   ]
-          aux (Op LOG3)         = [ ProcedureCall $ procTag "log3"
+          aux (Op LOG3)         = underflowGuard 5 ++
+                                  [ ProcedureCall $ procTag "log3"
                                   , Op POP
                                   ]
-          aux (Op LOG4)         = [ ProcedureCall $ procTag "log4"
+          aux (Op LOG4)         = underflowGuard 6 ++
+                                  [ ProcedureCall $ procTag "log4"
                                   , Op POP
                                   ]
-          aux (Op CALL)         = [ ProcedureCall $ procTag "call"
+          aux (Op CALL)         = underflowGuard 7 ++
+                                  [ ProcedureCall $ procTag "call"
                                   -- [success]
                                   ]
-          aux (Op RETURN)       = [ Push 1
+          aux (Op RETURN)       = underflowGuard 2 ++
+                                  [ Push 1
                                   -- [success == 1, offset, size]
                                   , ProcedureCall $ procTag "done"
                                   -- Control never reaches this point
                                   ]
-          aux (Op REVERT)       = [ Push 0
+          aux (Op REVERT)       = underflowGuard 2 ++
+                                  [ Push 0
                                   -- [success == 0, offset, size]
                                   , ProcedureCall $ procTag "done"
                                   -- Control never reaches this point
