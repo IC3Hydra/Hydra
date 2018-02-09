@@ -114,10 +114,13 @@ class PyEthereumTestCase(unittest.TestCase):
 
 class PyEthereumHydraDeployment(HydraDeployment):
 
-    def __init__(self, chain, creator_key, creator_addr, path_to_metacontract,
-                 paths_to_heads, instrument=True, verbose=False, instrumenter_path="hydra/instrumenter/"):
+    def __init__(self, chain, creator_key, creator_addr, paths_to_heads,
+                 instrument=True, verbose=False,
+                 instrumenter_path="hydra/instrumenter/",
+                 metacontract_path=None):
 
-        super().__init__(creator_addr, path_to_metacontract, paths_to_heads, instrument, verbose)
+        super().__init__(creator_addr, paths_to_heads, instrument, verbose,
+                         metacontract_path=metacontract_path)
         self.deployment_chain = chain
         self.creator_key = creator_key
         self.creator_addr = creator_addr

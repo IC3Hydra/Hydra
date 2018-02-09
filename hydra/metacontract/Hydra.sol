@@ -14,7 +14,6 @@
  *  | throw (OOG)    | N.A.           | return "throw" | throw      |
  *  =================================================================
  */
-pragma solidity ^0.4.18;
 
 contract ASMUtils {
     function _calldataload(uint256 startPos) internal pure returns (bytes32 word) {

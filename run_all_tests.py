@@ -40,13 +40,6 @@ res = unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFr
 success &= res.wasSuccessful()
 prettyprint("Finished Hydra (head+instrumenter+metacontract) tests")
 
-# Run tests for MC
-prettyprint("Running Hydra Tests (MC)")
-from hydra.test import test_hydra
-res = unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromModule(test_hydra))
-success &= res.wasSuccessful()
-prettyprint("Finished Hydra Tests (MC)")
-
 # Run MontyHall tests
 prettyprint("Running Monty Hall single-head tests")
 from examples.MontyHall.test import mh_head_test

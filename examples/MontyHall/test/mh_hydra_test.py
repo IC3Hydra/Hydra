@@ -6,7 +6,7 @@ import types
 from utils.pyethereum_test_utils import PyEthereumHydraDeployment
 from utils.deployment import get_contract_translator, kall
 
-from examples.MontyHall.test import META_CONTRACT, PATH_TO_HEADS, mh_head_test
+from examples.MontyHall.test import PATH_TO_HEADS, mh_head_test
 
 from ethereum.slogging import configure_logging
 config_string = ':trace'
@@ -14,14 +14,13 @@ config_string = ':trace'
 
 
 def deploy_montyhall_mc(_tester, chain):
-    mc_path = META_CONTRACT
     head_files = [
         PATH_TO_HEADS + 'MontyHall_florian.sol',
-        PATH_TO_HEADS + 'MontyHall_florian.se',
+        #PATH_TO_HEADS + 'MontyHall_florian.se', #TODO(serpent head that is too large)
         ]
 
     pyeth_deploy = PyEthereumHydraDeployment(chain, _tester.k0, _tester.a0,
-                                             mc_path, head_files,
+                                             head_files,
                                              instrument=True)
     deployed_contracts = pyeth_deploy.build_and_deploy()
 

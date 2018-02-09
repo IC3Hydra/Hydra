@@ -5,7 +5,7 @@ import unittest
 from ethereum import utils
 from os.path import basename
 
-from utils.pyethereum_test_utils import PyEthereumTestCase, bytes_to_int, int_to_bytes
+from utils.pyethereum_test_utils import PyEthereumTestCase
 
 try:
     from examples.ERC20.test.test_config import PATH_TO_CONTRACTS

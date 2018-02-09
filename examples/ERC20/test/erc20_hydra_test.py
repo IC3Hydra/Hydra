@@ -10,7 +10,6 @@ try:
     INSTRUMENTER_PATH = "hydra/instrumenter/"
 except:
     PATH_TO_CONTRACTS = "."
-    META_CONTRACT = "../../hydra/metacontract/Hydra.sol"
     INSTRUMENTER_PATH = "../../hydra/instrumenter/"
     import erc20_tests_1, erc20_tests_2, erc20_test_gas_costs
 
@@ -24,7 +23,6 @@ config_string = ':trace'
 
 
 def deploy_erc20_mc(_tester, chain, num_heads=None):
-    mc_path = META_CONTRACT
     head_files = [
         PATH_TO_CONTRACTS + '/nonvyper/ERC20_solidity_1.sol',
         PATH_TO_CONTRACTS + '/nonvyper/ERC20_solidity_2.sol',
@@ -44,8 +42,9 @@ def deploy_erc20_mc(_tester, chain, num_heads=None):
 
     pyeth_deploy = PyEthereumHydraDeployment(chain,
                                              _tester.k0, _tester.a0,
-                                             mc_path, head_files,
-                                             instrument=True, instrumenter_path=INSTRUMENTER_PATH)
+                                             head_files,
+                                             instrument=True,
+                                             instrumenter_path=INSTRUMENTER_PATH)
     deployed_contracts = pyeth_deploy.build_and_deploy(include_constructor=False, debug=False)
 
     hydra = deployed_contracts[0][1]

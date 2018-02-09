@@ -20,7 +20,7 @@ def deploy_erc20_mc(_tester, chain, num_heads=None):
         PATH_TO_HEADS + 'ERC20_solidity_1.sol',
         PATH_TO_HEADS + 'ERC20_solidity_2.sol',
         PATH_TO_HEADS + 'ERC20_serpent.se',
-        PATH_TO_HEADS + 'ERC20_vyper.vy',
+        PATH_TO_HEADS + 'ERC20_viper.vy',
         ]
 
     if num_heads is None:
@@ -35,10 +35,11 @@ def deploy_erc20_mc(_tester, chain, num_heads=None):
 
     pyeth_deploy = PyEthereumHydraDeployment(chain,
                                              _tester.k0, _tester.a0,
-                                             mc_path, head_files,
-                                             instrument=False)
+                                             head_files,
+                                             instrument=False,
+                                             metacontract_path=mc_path)
     deployed_contracts = pyeth_deploy.build_and_deploy(
-        include_constructor=False, debug=False
+        include_constructor=False,
     )
 
     hydra = deployed_contracts[0][1]

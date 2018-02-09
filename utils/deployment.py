@@ -85,9 +85,9 @@ class HydraDeployment(metaclass=ABCMeta):
 
     INSTRUMENTER_PATH = "hydra/instrumenter/"
 
-    def __init__(self, creator_addr, path_to_metacontract, paths_to_heads, instrument=True, verbose=False):
+    def __init__(self, creator_addr, paths_to_heads, instrument=True, verbose=False, metacontract_path=None):
         self.creator_addr = creator_addr
-        self.path_to_metacontract = path_to_metacontract
+        self.metacontract_path = metacontract_path
         self.paths_to_heads = paths_to_heads
         self.instrument = instrument
 
@@ -113,39 +113,26 @@ class HydraDeployment(metaclass=ABCMeta):
         # get the signatures of all functions in the ABI
         abi_sigs, init_sig = self.extract_abi(include_constructor)
 
-        # TODO(lorenzb): This currently fails because serpent contracts
-        # seem to have a different ABI format. So instead we just use
-        # the first head's ABI
-        #
-        # get the common ABI of heads
-        # abis = [get_abi(path) for path in self.paths_to_heads]
-        # abidicts = [{entry['name']: entry for entry in abi} for abi in abis]
-        # common_names = None
-        # for abidict in abidicts:
-        #     if common_names is None:
-        #         common_names = set(abidict.keys())
-        #     else:
-        #         common_names.intersection_update(abidict.keys())
-        # print('SHARED NAMES', common_names)
-        # for common_name in common_names:
-        #     assert all(abidict[common_name] == abidicts[0][common_name] for abidict in abidicts)
-        # for i, abidict in enumerate(abidicts):
-        #     for name in abidict:
-        #         if name not in common_names:
-        #             print('Head {} has name not found in all heads: {}'.format(i, name))
-        # common_abi = [abidicts[0][common_name] for common_name in common_names]
-        common_abi = get_abi(self.paths_to_heads[0])
-
-        # hard-code the head addresses and valid signatures into
-        # the Meta Contract
-        # self.logger.debug("FORMATTING META-CONTRACT")
-        # meta_contract_code = self.format_meta_contract(all_addresses[1:],
-        #                                                abi_sigs, init_sig,
-        #                                                debug=debug)
-        self.logger.debug("CONSTRUCTING META-CONTRACT")
-        meta_contract_code = utils.decode_hex(check_output(
-            ["stack", "exec", "instrumenter-exe", "--", "metacontract"] + [utils.encode_hex(a) for a in all_addresses[1:]],
-            cwd=self.INSTRUMENTER_PATH).strip())
+        if self.instrument:
+            common_abi = get_abi(self.paths_to_heads[0])
+            # hard-code the head addresses and valid signatures into
+            # the Meta Contract
+            # self.logger.debug("FORMATTING META-CONTRACT")
+            # meta_contract_code = self.format_meta_contract(all_addresses[1:],
+            #                                                abi_sigs, init_sig,
+            #                                                debug=debug)
+            self.logger.debug("CONSTRUCTING META-CONTRACT")
+            meta_contract_code = utils.decode_hex(check_output(
+                ["stack", "exec", "instrumenter-exe", "--", "metacontract"] + [utils.encode_hex(a) for a in all_addresses[1:]],
+                cwd=self.INSTRUMENTER_PATH).strip())
+            mc_language = 'evm'
+        else:
+            # use a Meta-Contract implemented in a high-level language
+            common_abi = None
+            mc_language = extract_language(self.metacontract_path)
+            meta_contract_code = self.format_meta_contract(all_addresses[1:],
+                                                           abi_sigs, init_sig,
+                                                           debug=debug)
 
         # instrument all the heads
         first_head = True
@@ -165,8 +152,8 @@ class HydraDeployment(metaclass=ABCMeta):
 
         self.logger.debug("DEPLOYING ALL CONTRACTS")
 
-        self.logger.debug("DEPLOYING THE META-CONTRACT {}".format(self.path_to_metacontract))
-        address, abi = self.deploy_contract(meta_contract_code, common_abi, "evm", **kwargs)
+        self.logger.debug("DEPLOYING THE META-CONTRACT {}".format(self.metacontract_path))
+        address, abi = self.deploy_contract(meta_contract_code, common_abi, mc_language, **kwargs)
         self.logger.debug("DEPLOYED at 0x{}".format(address.hex()))
         deployed_contracts.append((address, abi))
 
@@ -186,7 +173,7 @@ class HydraDeployment(metaclass=ABCMeta):
         heads = ["0x" + a.hex() for a in head_addresses]
         heads = ", ".join(heads)
 
-        with open(self.path_to_metacontract) as inf:
+        with open(self.metacontract_path) as inf:
             meta_contract_code = inf.read()
 
         # render the Jinja templates in Hydra.sol
@@ -269,40 +256,9 @@ class HydraDeployment(metaclass=ABCMeta):
         self.temp_chain.revert(state_snapshot)
         return byte_code
 
-    # def instrument_head(self, code, language, mc_address):
-    #     """
-    #     Instruments a contract's bytecode to enable interaction with the Hydra
-    #     Meta Contract
-    #     """
-
-    #     # run the constructor to extract the contract's code
-    #     byte_code = self.run_constructor(code, language)
-
-    #     # Solidity appends a swarm at the end of the compiled code. Remove it!
-    #     # The format is [swarm_start Hash(64) swarm_end]
-    #     swarm_start = "a165627a7a72305820"
-    #     swarm_end = "0029"
-
-    #     swarm_len = (len(swarm_start) + 64 + len(swarm_end))
-    #     start_pos = len(byte_code) - swarm_len
-    #     end_pos = len(byte_code) - len(swarm_end)
-
-    #     if language == 'solidity':
-    #         # check that the swarm is at the end of the file
-    #         assert byte_code[end_pos:] == swarm_end
-    #         assert byte_code[start_pos: start_pos + len(swarm_start)] == swarm_start
-    #         byte_code = byte_code[:start_pos]
-
-    #     # run the instrumenter
-    #     byte_code = check_output(["stack", "exec", "instrumenter-exe",
-    #                               "--", "instrument",
-    #                               "0x{}".format(utils.encode_hex(mc_address)),
-    #                               "{}".format(byte_code)],
-    #                              cwd=self.INSTRUMENTER_PATH).strip()
-
-    #     return utils.decode_hex(byte_code)
-
-    def instrument_head(self, first_head, code, language, mc_address, run_constructor=True, detect_swarm=False, write_stderr_to=None, code_id=""):
+    def instrument_head(self, first_head, code, language, mc_address,
+                        run_constructor=True, detect_swarm=False,
+                        write_stderr_to=None, code_id=""):
         """
         Instruments a contract's bytecode to enable interaction with the Hydra
         Meta Contract

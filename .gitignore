@@ -204,5 +204,6 @@ pip-selfcheck.json
 !.vscode/extensions.json
 .history
 
+.DS_Store
 
 # End of https://www.gitignore.io/api/vim,emacs,python,virtualenv,visualstudiocode

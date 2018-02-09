@@ -23,8 +23,9 @@ def deploy_montyhall_mc(_tester, chain):
         ]
 
     pyeth_deploy = PyEthereumHydraDeployment(chain, _tester.k0, _tester.a0,
-                                             mc_path, head_files,
-                                             instrument=False)
+                                             head_files,
+                                             instrument=False,
+                                             metacontract_path=mc_path)
     deployed_contracts = pyeth_deploy.build_and_deploy()
 
     hydra = deployed_contracts[0][1]
