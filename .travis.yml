@@ -10,3 +10,7 @@ script:
   - ls
   - pwd
   - docker run -v $PWD:/repo lorenzb/hydra bash -c "cp -r /repo /repo2  && cd /repo2/ && python3.6 -m pip install -r requirements.txt && python3.6 run_all_tests.py"
+
+notifications:
+  slack:
+    secure: "R5QMNbvpdg7UDX3g21vAo4ZUPkcLy/0Gm/5hVljY5tq5nZp8sqCn8IILDR0r8XQpl531A13jndxg9ENZzlZ88ZMKaqsyNwO7v6zIqbbkaMqcPnjHfvMAdYq//dMTm2bd+jUVnqsy2BVolqD7fqL4zgoip8piThiIUhnOtnxHlFC6ia0y5UWymEUl+2E2pmNVDGAXGWA4iLjqMurRECm0YF85SZkpHwVJxTKbnVrD2I4b3PFmn65idhqR3qpI/aYCzPSurSriwGw+96GJvFxGA9iTOXCTwpkU5kHyDksWWMFljqISK+A4wFFeZbQCMPp1OAbwUpafigVlgN1yaI8Y9wUk053JM4enxZB9GI1HusCpT4HqzlUVzj/fub/Fd7IzGJxKGhcRse2eLExunVfvMZ9EBEZLZvPSA/cUMe1YX4L5/oGZqhItOG0IAw9tVGrFtj3Kd/GKYwRCF3335b8hsansb88i0SsgfEfU/lKcoMuMsnpje1O8FKn1JRWxmAzC1n3/zpXS9qU6eCSN5OmgszYRydcH0VIHn8rlCeQfondKmoSbXYOGTJWs9SNQ5bQapUFWBjRsQ2IVIuQsmvceG2r9hbqWMQhK0/TOrbRGfQLGDFeQacGC+apHy6XhA5BOExaXE92qezgv2g5WsDLUeYcZIvQ6wVjqTuBdWRf9BrE="
