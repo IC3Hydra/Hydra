@@ -8,56 +8,60 @@ import           EVM.Instrumentation.Common
 import           EVM.While
 import qualified EVM.While.Macros as M
 import           Prelude          hiding (EQ, GT, LT)
-import           Text.Printf
-import           Util
 
 instrumentOps :: Integer -> [OpcodePlus] -> [OpcodePlus]
 instrumentOps mc = concatMap aux
-    where aux (Op STOP)         = [ Push 0, Op $ DUP 1, Push 1
+    where aux (Op STOP)         = [ Push 0, Op (DUP 1), Push 1
                                   -- [success == 1, 0, 0]
                                   , ProcedureCall $ procTag "done"
                                   -- Control never reaches this point
                                   ]
-          aux (Op ADDRESS)      = [ Push mc    -- ⤳ S [N "mc_address"]
+          aux (Op ADDRESS)      = [ Push mc
                                   ]
           aux (Op BALANCE)      = underflowGuard 1 ++
-                                  [ ProcedureCall $ procTag "balance" -- ⤳ S [N "balance"]
+                                  [ ProcedureCall $ procTag "balance"
                                   ]
-          aux (Op CALLER)       = [ Push 0x00           -- ⤳ S [N "0"]
-                                  , Op $ CALLDATALOAD     -- ⤳ S [N "calldata[0]"]
+          aux (Op CALLER)       = [ Push 0x00
+                                  -- [0x00]
+                                  , Op CALLDATALOAD
+                                  -- [caller]
                                   ]
-          aux (Op CALLVALUE)    = [ Push 0x20       -- ⤳ S [N "0x20"]
-                                  , Op $ CALLDATALOAD    -- ⤳ S [N "calldata[0x20]"]
+          aux (Op CALLVALUE)    = [ Push 0x20
+                                  -- [0x20]
+                                  , Op CALLDATALOAD
+                                  -- [callvalue]
                                   ]
           aux (Op CALLDATALOAD) = underflowGuard 1 ++
                                   [ ProcedureCall $ procTag "calldataload"
                                   ]
-          aux (Op CALLDATASIZE) = [ Op $ CALLDATASIZE           -- ⤳ S [N "calldata size"]
-                                  , Push 0x60 -- ⤳ S [N "calldata stash size", V "calldata size"]
-                                  , Op $ (SWAP  1)               -- ⤳ S [V "calldata size", V "calldata stash size"]
-                                  , Op $ SUB                     -- ⤳ S [N "calldata size - calldata stash size"]
+          aux (Op CALLDATASIZE) = [ Push 0x60
+                                  -- [0x60]
+                                  , Op CALLDATASIZE
+                                  -- [calldatasize, 0x60]
+                                  , Op SUB
+                                  -- [calldatasize - 0x60]
                                   ]
           aux (Op CALLDATACOPY) = underflowGuard 3 ++
                                   [ ProcedureCall $ procTag "calldatacopy"
-                                  , Op $ POP
+                                  , Op POP
                                   ]
           -- TODO(lorenzb): All ops that offset memory are vulnerable to overflow (MLOAD, MSTORE, MSTORE8, CALLDATALOAD, ...)
           aux (Op MLOAD)        = underflowGuard 1 ++
                                   [ ProcedureCall $ procTag "offsetMem"
                                   -- [mem_start + offset]
-                                  , Op $ MLOAD
+                                  , Op MLOAD
                                   -- [M[mem_start + offset]]
                                   ]
           aux (Op MSTORE)       = underflowGuard 2 ++
                                   [ ProcedureCall $ procTag "offsetMem"
                                   -- [mem_start + offset, word]
-                                  , Op $ MSTORE
+                                  , Op MSTORE
                                   -- []
                                   ]
           aux (Op MSTORE8)      = underflowGuard 2 ++
                                   [ ProcedureCall $ procTag "offsetMem"
                                   -- [mem_start + offset, byte]
-                                  , Op $ MSTORE8
+                                  , Op MSTORE8
                                   -- []
                                   ]
           aux (Op SHA3)         = underflowGuard 2 ++
@@ -65,18 +69,18 @@ instrumentOps mc = concatMap aux
                                   ]
           aux (Op JUMP)         = [ TagJump "jumptable"
                                   ]
-          aux (Op JUMPI)        = [ Op $ (SWAP 1)
+          aux (Op JUMPI)        = [ Op (SWAP 1)
                                   -- [should_jump, jumpdest]
                                   , TagJumpi "jumptable" -- ⤳ S [V "pc"]
                                   -- [jumpdest]
-                                  , Op $ POP
+                                  , Op POP
                                   -- []
                                   ]
           aux (Op MSIZE)        = [ Push memoryMOffset
                                   -- [mem_start]
-                                  , Op $ MSIZE
+                                  , Op MSIZE
                                   -- [msize, mem_start]
-                                  , Op $ SUB
+                                  , Op SUB
                                   -- [msize - mem_start]
                                   ]
           aux (Op LOG0)         = underflowGuard 2 ++
@@ -115,9 +119,9 @@ instrumentOps mc = concatMap aux
                                   , ProcedureCall $ procTag "done"
                                   -- Control never reaches this point
                                   ]
-          aux (Op (Unknown _))  = [ Push 0, Op $ DUP 1, Op $ DUP 1
+          aux (Op (Unknown _))  = [ Push 0, Op (DUP 1), Op (DUP 1)
                                   -- [success == 0, offset == 0, size = 0]
-                                  ,ProcedureCall $ procTag "done"
+                                  , ProcedureCall $ procTag "done"
                                   -- Control never reaches this point
                                   ]
           aux op                = [ op ]
