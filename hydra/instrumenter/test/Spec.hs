@@ -4,16 +4,17 @@ import           Test.Tasty.HUnit
 import           Test.Tasty.QuickCheck as QC
 --import           Test.Tasty.SmallCheck as SC
 
-import qualified Data.ByteString       as ByteString
+import qualified Data.ByteString       as B
+import           Data.Either
 import           Data.List
 import           Data.Ord
 import           Data.Word
 import           EVM.Bytecode          as BC
 import           EVM.Instrumentation
+import           Util
 
-
-instance Arbitrary ByteString.ByteString where
-    arbitrary = ByteString.pack <$> QC.listOf QC.arbitrary
+instance Arbitrary B.ByteString where
+    arbitrary = B.pack <$> QC.listOf QC.arbitrary
 
 instance Arbitrary BC.Opcode where
     arbitrary = QC.frequency [(10, simple), (1, push), (1, swap), (1, dup), (1, unknown)]
@@ -57,20 +58,15 @@ prop_opcodeToWord8Inverse op = op `equal` (BC.word8ToOpcode . BC.opcodeToWord8) 
     where equal (PUSH n _) (PUSH n' _) = n == n'
           equal op         op'         = op == op'
 
-prop_parseInverse :: ByteString.ByteString -> Property
+prop_parseInverse :: B.ByteString -> Property
 prop_parseInverse b = isRight parsed ==> b == (assemble . fromRight) parsed
     where parsed = parse b
-          isRight = either (const False) (const True)
-          fromRight = either (error "Left") id
 
-prop_parseLenientInverse :: ByteString.ByteString -> Bool
-prop_parseLenientInverse b | parsed == [] = ByteString.empty == b
-                           | last parsed == Unknown 0xfe = (assemble . init) parsed `isLongPrefix` b
-                           | otherwise = b == assemble parsed
+prop_parseLenientInverse :: B.ByteString -> Bool
+prop_parseLenientInverse b = B.unpack (assemble parsed)
+                            `isPrefix` (B.unpack b ++ repeat 0)
     where parsed = fromRight (parseLenient b)
-          isRight = either (const False) (const True)
-          fromRight = either (error "Left") id
-          isLongPrefix xs ys = xs == ByteString.take (ByteString.length xs) ys && ByteString.length xs + 32 >= ByteString.length ys
+          isPrefix xs ys = xs == take (length xs) ys
 
 prop_assembleInverse :: [BC.Opcode] -> Bool
 prop_assembleInverse ops =
@@ -78,7 +74,7 @@ prop_assembleInverse ops =
         (Left _)     -> False
         (Right ops') -> ops == ops'
 
-prop_hexStringToByteStringInverse :: ByteString.ByteString -> Bool
+prop_hexStringToByteStringInverse :: B.ByteString -> Bool
 prop_hexStringToByteStringInverse bs =
     bs == (BC.hexStringToByteString . BC.byteStringToHexString) bs
 

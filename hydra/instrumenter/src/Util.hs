@@ -1,4 +1,4 @@
-module Util 
+module Util
 ( showError
 , consError
 , fromRight

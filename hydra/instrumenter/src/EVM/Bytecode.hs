@@ -19,9 +19,9 @@ module EVM.Bytecode
 import           Control.Applicative
 import           Control.Monad
 import           Data.Attoparsec.ByteString
-import           Data.ByteString                  (ByteString, pack, unpack)
-import           Data.Word                        (Word8)
-import           Prelude                          hiding (EQ, GT, LT)
+import qualified Data.ByteString as B
+import           Data.Word (Word8)
+import           Prelude hiding (EQ, GT, LT, takeWhile)
 import           Text.Printf
 
 data Opcode = STOP
@@ -260,8 +260,8 @@ opcodeToWord8 REVERT         = 0xfd
 opcodeToWord8 SUICIDE        = 0xff
 opcodeToWord8 (Unknown x)    = x
 
-bytestringToInteger :: ByteString -> Integer
-bytestringToInteger b = sum $ zipWith (*) (map fromIntegral . reverse . unpack $ b) (iterate (* 256) 1)
+bytestringToInteger :: B.ByteString -> Integer
+bytestringToInteger b = sum $ zipWith (*) (map fromIntegral . reverse . B.unpack $ b) (iterate (* 256) 1)
 
 integerToBytes :: Word8 -> Integer -> [Word8]
 integerToBytes l i = reverse $ Prelude.take (fromIntegral l) (aux i ++ repeat 0)
@@ -272,22 +272,25 @@ integerToBytes l i = reverse $ Prelude.take (fromIntegral l) (aux i ++ repeat 0)
 parserOpcode :: Parser Opcode
 parserOpcode = do w <- anyWord8
                   case word8ToOpcode w of
-                      (PUSH n _) -> try ((PUSH n . bytestringToInteger) <$> Data.Attoparsec.ByteString.take (fromIntegral  n))
+                      (PUSH n _) -> (PUSH n . bytestringToInteger) <$> Data.Attoparsec.ByteString.take (fromIntegral  n)
                       o          -> return o
 
-parserInvalidEnd :: Parser Opcode
-parserInvalidEnd = do takeWhile1 (const True)
-                      return (Unknown 0xfe)
-
+parserIncompletePush :: Parser Opcode
+parserIncompletePush = do w <- anyWord8
+                          case word8ToOpcode w of
+                              (PUSH n _) -> do start <- takeWhile (const True)
+                                               let nInt = fromIntegral n
+                                               let end = B.pack . Prelude.take (nInt - B.length start) . repeat $ 0
+                                               return . PUSH n . bytestringToInteger $ start `B.append` end
+                              _          -> fail "expected incomplete PUSH"
 
 parserProgram :: Parser [Opcode]
 parserProgram = many parserOpcode <* endOfInput
 
 parserProgramLenient :: Parser [Opcode]
 parserProgramLenient = do program <- many parserOpcode
-                          suffix <- option [] ((\x -> [x]) <$> parserInvalidEnd)
-                          endOfInput
-                          return (program ++ suffix)
+                          (endOfInput >> return program) <|> (snoc program <$> parserIncompletePush <* endOfInput)
+    where snoc xs x = xs ++ [x]
 
 
 pairs :: [a] -> [(a,a)]
@@ -314,21 +317,21 @@ hexDigit x | x == '0' = 0x0
            | x == 'f' = 0xf
            | otherwise = error "invalid hex digit"
 
-hexStringToByteString :: String -> ByteString
-hexStringToByteString = pack . map (\(n1,n2) -> n1 * 16 + n2) . pairs . map fromIntegral . map hexDigit
+hexStringToByteString :: String -> B.ByteString
+hexStringToByteString = B.pack . map (\(n1,n2) -> n1 * 16 + n2) . pairs . map fromIntegral . map hexDigit
 
-byteStringToHexString :: ByteString -> String
-byteStringToHexString = concatMap (printf "%02x") . unpack
+byteStringToHexString :: B.ByteString -> String
+byteStringToHexString = concatMap (printf "%02x") . B.unpack
 
-parse :: ByteString -> Either String [Opcode]
+parse :: B.ByteString -> Either String [Opcode]
 parse = parseOnly parserProgram
 
-parseLenient :: ByteString -> Either String [Opcode]
+parseLenient :: B.ByteString -> Either String [Opcode]
 parseLenient = parseOnly parserProgramLenient
 
-assemble :: [Opcode] -> ByteString
+assemble :: [Opcode] -> B.ByteString
 assemble ops = if isWellFormed ops
-               then pack . concatMap aux $ ops
+               then B.pack . concatMap aux $ ops
                else error "assemble: ops isn't well-formed"
     where aux (PUSH n x) = opcodeToWord8 (PUSH n x) : integerToBytes n x
           aux op         = [opcodeToWord8 op]
