@@ -1,12 +1,8 @@
 module Main where
 
-import           Control.Monad
-import           Data.Char
-import qualified Data.Text           as T
 import           EVM.Bytecode
 import           EVM.GenericInitcode
 import           EVM.Instrumentation.Common
-import           EVM.Instrumentation.HeadOne
 import           EVM.While
 import           System.Environment
 import           System.Exit

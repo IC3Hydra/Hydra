@@ -2,7 +2,6 @@ module Main where
 
 import           Control.Monad
 import           Data.Char
-import qualified Data.Text           as T
 import           EVM.Bytecode
 import           EVM.GenericInitcode
 import qualified EVM.Instrumentation as I

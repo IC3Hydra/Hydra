@@ -5,7 +5,6 @@ module EVM.GenericInitcode
 import Control.Monad
 import qualified Data.ByteString as B (length)
 import EVM.Bytecode
-import EVM.BytecodePlus
 import Util
 
 genericInitcode :: [Opcode]

@@ -19,7 +19,6 @@ module EVM.Bytecode
 import           Control.Applicative
 import           Control.Monad
 import           Data.Attoparsec.ByteString
-import           Data.Attoparsec.ByteString.Char8 (char8, endOfLine, isDigit_w8)
 import           Data.ByteString                  (ByteString, pack, unpack)
 import           Data.Word                        (Word8)
 import           Prelude                          hiding (EQ, GT, LT)

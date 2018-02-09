@@ -5,18 +5,14 @@ module EVM.Instrumentation
     , instrumentNth
     ) where
 
-import           Control.Monad
-import qualified Data.ByteString  as B (length)
 import           Data.Function
 import           Data.List
 import           Data.Maybe
-import           Data.Word
-import           EVM.Bytecode     (Opcode (..), assemble, opcodeSize)
+import           EVM.Bytecode     (Opcode (..))
 import           EVM.BytecodePlus (OpcodePlus (..), lift, lower)
 import qualified EVM.Instrumentation.HeadOne as HO
 import qualified EVM.Instrumentation.HeadN as HN
 import           EVM.While
-import qualified EVM.While.Macros as M
 import           Prelude          hiding (EQ, GT, LT)
 import           Text.Printf
 import           Util
