@@ -32,21 +32,23 @@ library:
     - EVM.Instrumentation.HeadN
     - EVM.Instrumentation.Metacontract
     - EVM.While
-  other-modules:
     - EVM.While.Macros
     - Util
+  other-modules:
 
 executables:
   instrumenter-exe:
     main: Main.hs
     ghc-options: -threaded -rtsopts -with-rtsopts=-N
-    source-dirs: app
+    source-dirs:
+      - app
     dependencies:
       - instrumenter
   whiletestprogs-exe:
     main: WhileTestProgs.hs
     ghc-options: -threaded -rtsopts -with-rtsopts=-N
-    source-dirs: app
+    source-dirs:
+      - app
     dependencies:
       - instrumenter
 
