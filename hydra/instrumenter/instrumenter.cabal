@@ -1,72 +1,114 @@
-name:                instrumenter
-version:             0.1.0.0
--- synopsis:
--- description:
-homepage:            https://github.com/githubuser/assembler#readme
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2017 Author name here
-category:            Web
-build-type:          Simple
-extra-source-files:  README.md
-cabal-version:       >=1.10
+-- This file has been generated from package.yaml by hpack version 0.20.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 75b39e5aedb03220d0b542d3aebdb64f4dd893be796deae7e84bc48699062b96
 
-library
-  hs-source-dirs:      src
-  exposed-modules:     EVM.Bytecode
-                     , EVM.BytecodePlus
-                     , EVM.GenericInitcode
-                     , EVM.Instrumentation
-                     , EVM.Instrumentation.Common
-                     , EVM.Instrumentation.HeadOne
-                     , EVM.Instrumentation.HeadN
-                     , EVM.Instrumentation.Metacontract
-                     , EVM.While
-  other-modules:       EVM.While.Macros
-                     , Util
-  build-depends:       base >= 4.7 && < 5
-                     , attoparsec
-                     , bytestring
-                     , containers
-                     , cryptonite
-                     , parsec
-                     , relapse >= 1.0.0.0
-                     , text
-  default-language:    Haskell2010
-
-executable instrumenter-exe
-  hs-source-dirs:      app
-  main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base
-                     , instrumenter
-                     , text
-  default-language:    Haskell2010
-
-executable whiletestprogs-exe
-  hs-source-dirs:      app
-  main-is:             WhileTestProgs.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base
-                     , instrumenter
-                     , text
-  default-language:    Haskell2010
-
-test-suite instrumenter-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Spec.hs
-  build-depends:       base
-                     , instrumenter
-                     , bytestring
-                     , QuickCheck
-                     , tasty
-                     , tasty-quickcheck
-                     , tasty-smallcheck
-                     , tasty-hunit
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  default-language:    Haskell2010
+name:           instrumenter
+version:        0.1.0
+synopsis:       Hydra instrumenter
+description:    See <thehydra.io> and the README at <https://github.com/IC3Hydra/Hydra>
+category:       Development
+homepage:       https://github.com/IC3Hydra/Hydra/hydra/instrumenter#readme
+bug-reports:    https://github.com/IC3Hydra/Hydra/hydra/instrumenter/issues
+maintainer:     <lorenzb@ethz.ch>
+build-type:     Simple
+cabal-version:  >= 1.10
 
 source-repository head
-  type:     git
-  location: https://github.com/githubuser/assembler
+  type: git
+  location: https://github.com/IC3Hydra/Hydra/hydra/instrumenter
+
+library
+  hs-source-dirs:
+      src
+  ghc-options: -Wunused-imports
+  build-depends:
+      attoparsec
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , cryptonite
+    , parsec
+    , relapse >=1.0.0.0
+    , text
+  exposed-modules:
+      EVM.Bytecode
+      EVM.BytecodePlus
+      EVM.GenericInitcode
+      EVM.Instrumentation
+      EVM.Instrumentation.Common
+      EVM.Instrumentation.HeadOne
+      EVM.Instrumentation.HeadN
+      EVM.Instrumentation.Metacontract
+      EVM.While
+  other-modules:
+      EVM.While.Macros
+      Util
+  default-language: Haskell2010
+
+executable instrumenter-exe
+  main-is: Main.hs
+  hs-source-dirs:
+      app
+  ghc-options: -Wunused-imports -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      attoparsec
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , cryptonite
+    , instrumenter
+    , parsec
+    , relapse >=1.0.0.0
+    , text
+  other-modules:
+      WhileTestProgs
+      Paths_instrumenter
+  default-language: Haskell2010
+
+executable whiletestprogs-exe
+  main-is: WhileTestProgs.hs
+  hs-source-dirs:
+      app
+  ghc-options: -Wunused-imports -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      attoparsec
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , cryptonite
+    , instrumenter
+    , parsec
+    , relapse >=1.0.0.0
+    , text
+  other-modules:
+      Main
+      Paths_instrumenter
+  default-language: Haskell2010
+
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  hs-source-dirs:
+      test
+  ghc-options: -Wunused-imports
+  cpp-options: -DTEST
+  build-depends:
+      QuickCheck
+    , attoparsec
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , cryptonite
+    , instrumenter
+    , parsec
+    , relapse >=1.0.0.0
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+    , tasty-smallcheck
+    , text
+  other-modules:
+      Paths_instrumenter
+  default-language: Haskell2010
