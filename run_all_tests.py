@@ -1,76 +1,66 @@
-import os, subprocess
+import contextlib
+import io
+import multiprocessing
+import os
+import subprocess
+import sys
 import unittest
 
+DETAILS_FOR_SUCCESSFUL_TESTS = False
 
-def prettyprint(message):
-    print("~" * 80, "\n" + message, "\n" + "~" * 80)
+def prettyprint(message, file=sys.stdout):
+    print("~" * 80, "\n" + message, "\n" + "~" * 80, file=file)
 
-success = True
+def run_tests_from_name(name, description, verbosity=2):
+    with io.StringIO() as buf, contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+        prettyprint("Running tests: {}".format(description), file=buf)
+        result = unittest.TextTestRunner(verbosity=verbosity).run(unittest.TestLoader().loadTestsFromName(name))
+        prettyprint("Finished tests: {}".format(description), file=buf)
+        return result.wasSuccessful(), buf.getvalue()
 
-# Run first test suite (Phil's) on each single head
-prettyprint("Running single-head tests, Suite 1")
-from examples.ERC20.test import erc20_tests_1
-res = unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromModule(erc20_tests_1))
-success &= res.wasSuccessful()
-prettyprint("Finished single-head tests, Suite 1")
+python_tests = [
+    # non-hydra
+    ('examples.ERC20.test.erc20_tests_1', 'ERC20 Heads 1'),
+    ('examples.ERC20.test.erc20_tests_2', 'ERC20 Heads 2'),
+    ('examples.MontyHall.test.mh_head_test', 'Monty Hall Heads'),
+    # manual hydra
+    ('examples.SimpleERC20.test.erc20_hydra_test', 'Simple ERC 20'),
+    ('examples.SimpleMontyHall.test.mh_hydra_test', 'Simple Monty Hall'),
+    # automated hydra
+    ('hydra.test.test_while', 'Instrumenter While'),
+    #('hydra.test.test_hydra.TestHydra', 'Hydra'), #TODO(lorenzb): Fix me
+                                                   #TODO(lorenzb): What about rest?
+    ('examples.ERC20.test.erc20_hydra_test', 'ERC20 Hydra'),
+    ('examples.MontyHall.test.mh_hydra_test', 'Monty Hall Hydra'),
+    ]
 
-# Run second test suite (Florian's) on each single head
-prettyprint("Running single-head tests, Suite 2")
-from examples.ERC20.test import erc20_tests_2
-res = unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromModule(erc20_tests_2))
-success &= res.wasSuccessful()
-prettyprint("Finished single-head tests, Suite 2")
+if __name__ == "__main__":
+    all_pass = True
 
-# Run external Haskell stack tests on metacontract
-prettyprint("Running Haskell instrumenter stack tests")
-cwd = os.getcwd()
-os.chdir("hydra/instrumenter")
-try:
-    osstdout = subprocess.check_call("stack test".split())
-except subprocess.CalledProcessError:
-    print("FAILED - Error, failure in stack test!")
-    success = False
-os.chdir(cwd)
-prettyprint("Finished Haskell instrumenter stack tests")
+    # Since we need the instrumenter for most tests, we test and build it first.
+    instrumenter_dir = os.path.join(os.getcwd(), 'hydra/instrumenter')
+    all_pass = all_pass and 0 == subprocess.call(['stack', 'test'],
+                                                 cwd=instrumenter_dir)
+    all_pass = all_pass and 0 == subprocess.call(['stack', 'build'],
+                                                 cwd=instrumenter_dir)
 
-# Run Hydra test, running both ERC20 tests on assembled metacontract
-prettyprint("Running Hydra (head+instrumenter+metacontract) tests")
-from examples.ERC20.test import erc20_hydra_test
-res = unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromModule(erc20_hydra_test))
-success &= res.wasSuccessful()
-prettyprint("Finished Hydra (head+instrumenter+metacontract) tests")
+    if not all_pass:
+        exit(1)
 
-# Run MontyHall tests
-prettyprint("Running Monty Hall single-head tests")
-from examples.MontyHall.test import mh_head_test
-res = unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromModule(mh_head_test))
-success &= res.wasSuccessful()
-prettyprint("Finished Monty Hall single-head tests")
+    # Run all python tests in parallel
+    pool = multiprocessing.Pool(processes=len(python_tests))
+    results = pool.starmap(run_tests_from_name, python_tests)
 
-# Run MontyHall Hydra tests
-prettyprint("Running Monty Hall Hydra tests")
-from examples.MontyHall.test import mh_hydra_test
-res = unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromModule(mh_hydra_test))
-success &= res.wasSuccessful()
-prettyprint("Finished Monty Hall Hydra tests")
+    for (success, output), (_, desc) in zip(results, python_tests):
+        all_pass = all_pass and success
 
-# Run Simplified ERC20 Hydra test
-prettyprint("Running Simplified ERC20 Hydra tests")
-from examples.SimpleERC20.test import erc20_hydra_test as erc20simple_hydra_test
-res = unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromModule(erc20simple_hydra_test))
-success &= res.wasSuccessful()
-prettyprint("Finished Simplified ERC20 Hydra tests")
+        if not success or DETAILS_FOR_SUCCESSFUL_TESTS:
+            print(output)
+        else:
+            prettyprint('Tests pass: {}'.format(desc))
 
-# Run Simplified MontyHall Hydra Test
-prettyprint("Running Simplified Monty Hall Hydra tests")
-from examples.SimpleMontyHall.test import mh_hydra_test as mhsimple_hydra_test
-res = unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromModule(mhsimple_hydra_test))
-success &= res.wasSuccessful()
-prettyprint("Finished Simplified Monty Hall Hydra tests")
+    if not all_pass:
+        print("Tests failed, exiting with error.")
+        exit(1)
 
-
-if not success:
-    print("FAILED : Test failures encounting, exiting with error.")
-    exit(1)
-else:
-    print("All tests completed successfully.")
+    exit(0)
