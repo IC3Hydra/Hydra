@@ -90,8 +90,6 @@ class TestHydra(PyEthereumTestCase):
         # kall(self.t, self.s, self.ct, self.single_mc_address, "HYDRA_INIT")
         # kall(self.t, self.s, self.ct, self.multi_mc.address, "HYDRA_INIT")
 
-        # # TODO(lorenzb): get logs from instrumented heads to make sure they don't log anything
-
     def test_agreement(self):
         from ethereum.slogging import configure_logging
         config_string = ':trace'
