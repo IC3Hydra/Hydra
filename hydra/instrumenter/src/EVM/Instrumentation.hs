@@ -50,7 +50,7 @@ checkInstrumentable ops = case errors of {[] -> Right (); _ -> Left errors}
                       , EXTCODESIZE
                       , EXTCODECOPY
                       , CREATE, CALLCODE
-                      , DELEGATECALL, SUICIDE
+                      , DELEGATECALL, SELFDESTRUCT
                       -- Metropolis opcodes
                       , STATICCALL, RETURNDATACOPY, RETURNDATASIZE
                       ]

@@ -96,7 +96,7 @@ data Opcode = STOP
             | DELEGATECALL
             | STATICCALL
             | REVERT
-            | SUICIDE
+            | SELFDESTRUCT
             | Unknown Word8
             deriving (Show, Eq)
 
@@ -178,7 +178,7 @@ word8ToOpcode 0xf3 = RETURN
 word8ToOpcode 0xf4 = DELEGATECALL
 word8ToOpcode 0xfa = STATICCALL
 word8ToOpcode 0xfd = REVERT
-word8ToOpcode 0xff = SUICIDE
+word8ToOpcode 0xff = SELFDESTRUCT
 word8ToOpcode w | 0x60 <= w && w < 0x60 + 32 = PUSH (fromIntegral $ w - 0x60 + 1) (2^256)
                 | 0x80 <= w && w < 0x80 + 16 = DUP (fromIntegral $ w - 0x80 + 1)
                 | 0x90 <= w && w < 0x90 + 16 = SWAP (fromIntegral $ w - 0x90 + 1)
@@ -257,7 +257,7 @@ opcodeToWord8 RETURN         = 0xf3
 opcodeToWord8 DELEGATECALL   = 0xf4
 opcodeToWord8 STATICCALL     = 0xfa
 opcodeToWord8 REVERT         = 0xfd
-opcodeToWord8 SUICIDE        = 0xff
+opcodeToWord8 SELFDESTRUCT   = 0xff
 opcodeToWord8 (Unknown x)    = x
 
 bytestringToInteger :: B.ByteString -> Integer

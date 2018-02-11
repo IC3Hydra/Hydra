@@ -95,7 +95,7 @@ data Expr = Lit Integer
           -- DELEGATECALL
           -- STATICCALL
           -- REVERT is a statement
-          -- SUICIDE
+          -- SELFDESTRUCT
           -- Unknown Word8
     deriving (Show, Eq)
 
