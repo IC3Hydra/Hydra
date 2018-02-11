@@ -311,9 +311,13 @@ procCall = let selfCall = (Scope
                    ]) in
            Proc "call" ["gas", "to", "value", "in_offset", "in_size", "out_offset", "out_size"] "success" (Scope
            [(M.if_ (Var "in_size")
-                 (Scope [(Assign "in_offset" (offsetMem (Var "in_offset")))]))
+                 (Scope [(Assign "in_offset" (offsetMem (Var "in_offset")))
+                        -- touch last byte of input so that MSIZE stays correct even if call failed, etc...
+                        ,(Discard (Mload (Sub (Add (Var "in_offset") (Var "in_size")) (Lit 0x20))))]))
            ,(M.if_ (Var "out_size")
-                 (Scope [(Assign "out_offset" (offsetMem (Var "out_offset")))]))
+                 (Scope [(Assign "out_offset" (offsetMem (Var "out_offset")))
+                        -- touch last byte of output so that MSIZE stays correct even if call failed, etc...
+                        ,(Discard (Mload (Sub (Add (Var "out_offset") (Var "out_size")) (Lit 0x20))))]))
            ,(IfElse (And (Lt (Lit 0) (Var "to")) (M.leq (Var "to") (Lit maxPrecompileAddress)))
                 -- TODO(lorenzb): check behaviour of precompiles when called with non-zero value
                 (Scope [(checkOrErr errorPrecompileCalledWithNonzeroValue (Iszero (Var "value")))

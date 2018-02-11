@@ -29,20 +29,17 @@ class TestHydra(PyEthereumTestCase):
 
         equivalence_head1_path = ASSETS + 'EquivalenceHead1.sol'
 
-        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT,
-            [equivalence_head1_path], instrument=False)
-        deployed_contracts = pyeth_deploy.build_and_deploy()
-        _, cls.naked_head = \
-            [abi for (addr, abi) in deployed_contracts]
+        with open(ASSETS + 'EquivalenceHead1.sol', 'r') as fd:
+            cls.naked_head = cls.s.contract(fd.read(), language='solidity')
 
-        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT,
+        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0,
             [equivalence_head1_path], instrument=True)
         deployed_contracts = pyeth_deploy.build_and_deploy()
         cls.single_mc_address = deployed_contracts[0][0] # deployed_contracts consists of (address, abi) tuples
 
         cls.single_head_address = deployed_contracts[1][0]
 
-        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0, META_CONTRACT,
+        pyeth_deploy = PyEthereumHydraDeployment(cls.s, cls.t.k0, cls.t.a0,
             [equivalence_head1_path, equivalence_head1_path], instrument=True)
         deployed_contracts = pyeth_deploy.build_and_deploy()
         cls.multi_mc_address = deployed_contracts[0][0] # deployed_contracts consists of (address, abi) tuples
@@ -66,15 +63,13 @@ class TestHydra(PyEthereumTestCase):
 
     def setUp(self):
         super().setUp()
-        # print(self.single_mc.translator.function_data)
 
-        def installLogListener(logs, address):
+        def installLogListener(logs, *addresses):
             def _listener(log):
-                if log.address == address and 1337 in log.topics:
+                if log.address in addresses:
                     logs.append(log)
 
             self.s.head_state.log_listeners.append(_listener)
-
 
         self.logs_naked_head = []
         installLogListener(self.logs_naked_head, self.naked_head.address)
@@ -85,11 +80,12 @@ class TestHydra(PyEthereumTestCase):
         self.logs_multi_mc = []
         installLogListener(self.logs_multi_mc, self.multi_mc_address)
 
-        # self.events_single_mc = []
-        # import sys
-        # sys.stdout.flush()
-        # self.s.head_state.log_listeners.append(
-        #     lambda x: (print('SINGLE_MC_EVENT', self.single_mc.translator.listen(x)), sys.stdout.flush()))
+        self.logs_all_instrumented_heads = []
+        installLogListener(self.logs_all_instrumented_heads,
+                           self.single_head_address,
+                           self.multi_head1_address,
+                           self.multi_head2_address)
+
 
         # kall(self.t, self.s, self.ct, self.single_mc_address, "HYDRA_INIT")
         # kall(self.t, self.s, self.ct, self.multi_mc.address, "HYDRA_INIT")
@@ -112,7 +108,7 @@ class TestHydra(PyEthereumTestCase):
         ]
 
         for (fn, args) in subtests:
-#            if fn != "testLogs": continue
+            # if fn != "testSelfCalls": continue
 
             with self.subTest(function=fn):
                 print('Subtest function:', fn)
@@ -120,28 +116,24 @@ class TestHydra(PyEthereumTestCase):
                 kall(self.t, self.s, self.ct, self.naked_head.address, fn, *args)
                 print('naked head done')
 
-                #configure_logging(config_string=config_string)
-
                 kall(self.t, self.s, self.ct, self.single_mc_address, fn, *args)
                 print('single mc done')
-                ######
-                # configure_logging(config_string=config_string)
-                ######
+
                 kall(self.t, self.s, self.ct, self.multi_mc_address, fn, *args)
                 print('multi mc done')
 
-                # print([(l.data, l.topics) for l in self.logs_naked_head])
-                # print([(l.data, l.topics) for l in self.logs_single_mc])
                 self.assertEqual(
                     [(l.data, l.topics) for l in self.logs_naked_head],
                     [(l.data, l.topics) for l in self.logs_single_mc])
                 self.assertEqual(
                     [(l.data, l.topics) for l in self.logs_naked_head],
                     [(l.data, l.topics) for l in self.logs_multi_mc])
+                self.assertEqual([], self.logs_all_instrumented_heads)
 
-                self.logs_naked_head = []
-                self.logs_single_mc = []
-                self.logs_multi_mc = []
+                self.logs_naked_head.clear()
+                self.logs_single_mc.clear()
+                self.logs_multi_mc.clear()
+                self.logs_all_instrumented_heads.clear()
 
 
 class TestMetaContract(PyEthereumTestCase):

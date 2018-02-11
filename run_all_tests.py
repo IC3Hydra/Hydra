@@ -28,8 +28,7 @@ python_tests = [
     ('examples.SimpleMontyHall.test.mh_hydra_test', 'Simple Monty Hall'),
     # automated hydra
     ('hydra.test.test_while', 'Instrumenter While'),
-    #('hydra.test.test_hydra.TestHydra', 'Hydra'), #TODO(lorenzb): Fix me
-                                                   #TODO(lorenzb): What about rest?
+    ('hydra.test.test_hydra.TestHydra', 'Hydra'), #TODO(lorenzb): What about other tests in the module?
     ('examples.ERC20.test.erc20_hydra_test', 'ERC20 Hydra'),
     ('examples.MontyHall.test.mh_hydra_test', 'Monty Hall Hydra'),
     ]

@@ -290,7 +290,11 @@ procCall = let regularCall = Scope
                                                  ,(Let "returndata_start" (Add (Var "call_trace_size") (Lit 0x40)))
                                                  ,(Let "returndata_size" (Sub Returndatasize (Var "returndata_start")))
                                                  ,(Returndatacopy (Var "out_offset") (Var "returndata_start") (min_ (Var "out_size") (Var "returndata_size")))]))])
-                             regularCall)]))])
+                             regularCall)]))
+           -- touch last byte of input and output so that MSIZE stays correct even if call failed, etc...
+           -- TODO(lorenzb): When implementing proper overflow checks, do this analogously to HeadN
+           ,(Discard (Mload (Sub (Add (Var "in_offset") (Var "in_size")) (Lit 0x20))))
+           ,(Discard (Mload (Sub (Add (Var "out_offset") (Var "out_size")) (Lit 0x20))))])
 
 procBalance = Proc "balance" ["address"] "balance" (Scope
               [(Let "record_ptr" getTracePtr)
