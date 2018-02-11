@@ -272,7 +272,9 @@ compProc (Proc name params output scope) =
     -- stack is [return_pc, output]
     ++ [Op JUMP]
     -- stack is [output]
-    where swap i = if i == 0 then [] else if i < 17 then [Op $ SWAP $ fromIntegral i] else error (printf "Proc %s has too many params" name)
+    where swap i | i == 0    = []
+                 | i <= 16   = [Op $ SWAP $ fromIntegral i]
+                 | otherwise = error (printf "Proc %s has too many params" name)
           rotateRight [] = []
           rotateRight xs = last xs : init xs
 
