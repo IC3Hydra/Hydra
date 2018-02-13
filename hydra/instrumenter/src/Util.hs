@@ -6,9 +6,6 @@ module Util
 , justOrError
 ) where
 
-import Data.Either
-import Data.Maybe
-
 showError :: (Show a) => Either a b -> Either String b
 showError (Left l)  = Left . show $ l
 showError (Right r) = Right r
