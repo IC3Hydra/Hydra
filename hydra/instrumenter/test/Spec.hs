@@ -9,9 +9,23 @@ import           Data.Either
 import           Data.List
 import           Data.Ord
 import           Data.Word
+import qualified EVM.Address           as A
 import           EVM.Bytecode          as BC
 import           EVM.Instrumentation
 import           Util
+
+instance Arbitrary A.Address where
+    arbitrary = A.fromInteger <$> QC.choose (0, 2^160-1)
+
+newtype AddressString = AddressString String deriving (Eq, Show)
+
+instance Arbitrary AddressString where
+    arbitrary = do width <- QC.choose (39, 41)
+                   alphabet <- QC.elements [ "0123456789abcdefA !"
+                                           , "0123456789abcdef"
+                                           ]
+                   a <- QC.vectorOf width (QC.elements alphabet)
+                   return (AddressString ("0x" ++ a))
 
 instance Arbitrary B.ByteString where
     arbitrary = B.pack <$> QC.listOf QC.arbitrary
@@ -39,8 +53,10 @@ main = defaultMain properties
 properties :: TestTree
 properties = testGroup "Properties" [qcProps]
 
-qcProps = testGroup "(byte code)"
-    [ QC.testProperty "word8ToOpcodeInverse" prop_word8ToOpcodeInverse
+qcProps = testGroup ""
+    [ QC.testProperty "addressParseInverse" prop_addressParseInverse
+    , QC.testProperty "addressPrintInverse" prop_addressPrintInverse
+    , QC.testProperty "word8ToOpcodeInverse" prop_word8ToOpcodeInverse
     , QC.testProperty "opcodeToWord8Inverse" prop_opcodeToWord8Inverse
     , QC.testProperty "parseInverse" prop_parseInverse
     , QC.testProperty "parseLenientInverse" prop_parseLenientInverse
@@ -49,6 +65,13 @@ qcProps = testGroup "(byte code)"
     , QC.testProperty "instrumentFirstRuns" prop_instrumentFirstRuns
     , QC.testProperty "instrumentNthRuns" prop_instrumentNthRuns
     ]
+
+prop_addressParseInverse :: AddressString -> Property
+prop_addressParseInverse (AddressString s) = isRight parsed ==> s == (A.print . fromRight) parsed
+    where parsed = A.parse s
+
+prop_addressPrintInverse :: A.Address -> Bool
+prop_addressPrintInverse a = a == (fromRight . A.parse . A.print) a
 
 prop_word8ToOpcodeInverse :: Word8 -> Bool
 prop_word8ToOpcodeInverse w = w == (BC.opcodeToWord8 . BC.word8ToOpcode) w
@@ -78,8 +101,8 @@ prop_hexStringToByteStringInverse :: B.ByteString -> Bool
 prop_hexStringToByteStringInverse bs =
     bs == (BC.hexStringToByteString . BC.byteStringToHexString) bs
 
-prop_instrumentFirstRuns :: Integer -> [BC.Opcode] -> Property
-prop_instrumentFirstRuns addr ops = addr <= (2^256-1) ==> either (const True) (const True) (instrumentFirst addr ops)
+prop_instrumentFirstRuns :: A.Address -> [BC.Opcode] -> Bool
+prop_instrumentFirstRuns addr ops = either (const True) (const True) (instrumentFirst addr ops)
 
-prop_instrumentNthRuns :: Integer -> [BC.Opcode] -> Property
-prop_instrumentNthRuns addr ops = addr <= (2^256-1) ==> either (const True) (const True) (instrumentNth addr ops)
+prop_instrumentNthRuns :: A.Address -> [BC.Opcode] -> Bool
+prop_instrumentNthRuns addr ops = either (const True) (const True) (instrumentNth addr ops)

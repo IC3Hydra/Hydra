@@ -8,6 +8,7 @@ module EVM.Instrumentation
 import           Data.Function
 import           Data.List
 import           Data.Maybe
+import qualified EVM.Address as A
 import           EVM.Bytecode     (Opcode (..))
 import           EVM.BytecodePlus (OpcodePlus (..), lift, lower)
 import qualified EVM.Instrumentation.HeadOne as HO
@@ -17,13 +18,13 @@ import           Prelude          hiding (EQ, GT, LT)
 import           Text.Printf
 import           Util
 
-instrumentFirst :: Integer -> [Opcode] -> Either String [Opcode]
+instrumentFirst :: A.Address -> [Opcode] -> Either String [Opcode]
 instrumentFirst mc contract = instrument HO.instrumentOps HO.procs mc contract
 
-instrumentNth :: Integer -> [Opcode] -> Either String [Opcode]
+instrumentNth :: A.Address -> [Opcode] -> Either String [Opcode]
 instrumentNth mc contract = instrument HN.instrumentOps HN.procs mc contract
 
-instrument :: (Integer -> [OpcodePlus] -> [OpcodePlus]) -> (Integer -> [Proc]) -> Integer -> [Opcode] -> Either String [Opcode]
+instrument :: (A.Address -> [OpcodePlus] -> [OpcodePlus]) -> (A.Address -> [Proc]) -> A.Address -> [Opcode] -> Either String [Opcode]
 instrument instrumentOps procs mc contract =
     do let ps = procs mc
        let cps = concatMap compProc ps

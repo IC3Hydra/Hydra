@@ -16,6 +16,7 @@ dependencies:
   - bytestring
   - containers
   - cryptonite
+  - optparse-applicative
   - parsec
   - relapse >= 1.0.0.0
   - text
@@ -23,6 +24,7 @@ dependencies:
 library:
   source-dirs: src
   exposed-modules:
+    - EVM.Address
     - EVM.Bytecode
     - EVM.BytecodePlus
     - EVM.GenericInitcode

@@ -1,6 +1,7 @@
 module EVM.Instrumentation.Common
 where
 
+import qualified EVM.Address as A
 import EVM.Bytecode
 import EVM.BytecodePlus
 import EVM.While
@@ -92,7 +93,7 @@ procCallHead = Proc "callHead" ["gas", "to", "value", "in_offset", "in_size", "o
                ,(checkOrErr errorWrongOutputFormat (Eq (returndataload (Lit 0x00)) (Lit 1)))])
 
 
-procMc mc = Proc "mc" [] "address" (Scope [(Assign "address" (Lit mc))])
+procMc mc = Proc "mc" [] "address" (Scope [(Assign "address" (Lit (A.toInteger mc)))])
 
 procUnknownJumpdest = Proc "unknownJumpdest" [] "_" (Scope
                       [(Discard (Lit 314159265358979)), (Discard (ProcCall "done" [Lit 0, Lit 0, Lit 0]))])

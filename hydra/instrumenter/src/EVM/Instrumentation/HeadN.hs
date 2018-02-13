@@ -2,6 +2,7 @@ module EVM.Instrumentation.HeadN
 where
 
 import           Data.List
+import qualified EVM.Address as A
 import           EVM.Bytecode
 import           EVM.BytecodePlus
 import           EVM.Instrumentation.Common
@@ -9,14 +10,14 @@ import           EVM.While
 import qualified EVM.While.Macros as M
 import           Prelude          hiding (EQ, GT, LT)
 
-instrumentOps :: Integer -> [OpcodePlus] -> [OpcodePlus]
+instrumentOps :: A.Address -> [OpcodePlus] -> [OpcodePlus]
 instrumentOps mc = concatMap aux
     where aux (Op STOP)         = [ Push 0, Op (DUP 1), Push 1
                                   -- [success == 1, 0, 0]
                                   , ProcedureCall $ procTag "done"
                                   -- Control never reaches this point
                                   ]
-          aux (Op ADDRESS)      = [ Push mc
+          aux (Op ADDRESS)      = [ Push (A.toInteger mc)
                                   ]
           aux (Op BALANCE)      = underflowGuard 1 ++
                                   [ ProcedureCall $ procTag "balance"
@@ -123,7 +124,7 @@ instrumentOps mc = concatMap aux
 
 
 -- TODO(lorenzb): fix order
-procs :: Integer -> [Proc]
+procs :: A.Address -> [Proc]
 procs mc = [ procMemcpyNoalias
            , procMin
            , procLog0

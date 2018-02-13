@@ -2,13 +2,14 @@ module EVM.Instrumentation.Metacontract
 ( metacontract
 ) where
 
+import qualified EVM.Address as A
 import EVM.Bytecode (Opcode)
 import EVM.Instrumentation.Common
 import EVM.While
 import qualified EVM.While.Macros as M
 import Util
 
-metacontract :: [Integer] -> [Opcode]
+metacontract :: [A.Address] -> [Opcode]
 metacontract heads = fromRight $ compileAndLower procs mc
     where procs = [ procHeadAddress heads
                   , procHeadCount heads
@@ -31,7 +32,7 @@ outerStateMutexOff = 3
 headAddress e = (ProcCall "headAddress" [e])
 procHeadAddress heads = Proc "headAddress" ["index"] "address" (Scope $
                         [(checkOrErr errorHeadIndexTooLarge (Lt (Var "index") (Lit (fromIntegral $ length heads))))
-                        ] ++ zipWith (\i a -> (M.if_ (Eq (Var "index") (Lit i)) (Scope [Assign "address" (Lit a)]))) [0..] heads)
+                        ] ++ zipWith (\i a -> (M.if_ (Eq (Var "index") (Lit i)) (Scope [Assign "address" (Lit (A.toInteger a))]))) [0..] heads)
 
 headCount = (ProcCall "headCount" [])
 procHeadCount heads = Proc "headCount" [] "count" (Scope [(Assign "count" (Lit (fromIntegral $ length heads)))])

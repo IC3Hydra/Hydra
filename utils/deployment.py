@@ -123,7 +123,7 @@ class HydraDeployment(metaclass=ABCMeta):
             #                                                debug=debug)
             self.logger.debug("CONSTRUCTING META-CONTRACT")
             meta_contract_code = utils.decode_hex(check_output(
-                ["stack", "exec", "instrumenter-exe", "--", "metacontract"] + [utils.encode_hex(a) for a in all_addresses[1:]],
+                ["stack", "exec", "instrumenter-exe", "--", "metacontract"] + [utils.checksum_encode(a).lower() for a in all_addresses[1:]],
                 cwd=self.INSTRUMENTER_PATH).strip())
             mc_language = 'evm'
         else:
@@ -293,10 +293,13 @@ class HydraDeployment(metaclass=ABCMeta):
         self.logger.debug("Byte code length before instrumentation: {}".format(len(byte_code)/2))
 
         # run the instrumenter
-        cmd = "1sthead" if first_head else "nthhead"
+        mode = "--first" if first_head else "--nth"
         pipes = subprocess.Popen(["stack", "exec", "instrumenter-exe",
-                                  "--", cmd,
-                                  "0x{}".format(utils.encode_hex(mc_address)),
+                                  "--",
+                                  "--lenient",
+                                  "instrument",
+                                  mode,
+                                  "--metacontract", utils.checksum_encode(mc_address).lower(),
                                   "{}".format(byte_code)],
                                  cwd=self.INSTRUMENTER_PATH, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         byte_code, std_err = pipes.communicate()
