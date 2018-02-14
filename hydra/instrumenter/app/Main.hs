@@ -1,6 +1,7 @@
 module Main where
 
 import           Data.Semigroup ((<>))
+import           Data.Word
 import qualified EVM.Address as A
 import           EVM.Bytecode
 import           EVM.GenericInitcode
@@ -9,7 +10,8 @@ import           EVM.Instrumentation.Metacontract
 import           Options.Applicative
 import           System.Exit
 import           System.IO
-
+import           Text.Printf
+import Numeric
 
 data ParsingMode = Strict
                  | Lenient
@@ -28,13 +30,49 @@ data InstrumentMode = First | Nth deriving (Eq, Show)
 parseInstrumentMode :: Parser InstrumentMode
 parseInstrumentMode =
       flag' First ( long "first"
-                 <> help "Instrument first head")
+                 <> help "Instrument first head.")
   <|> flag' Nth ( long "nth"
-               <> help "Instrument n-th head")
+               <> help "Instrument n-th head.")
+
+parseFunctionSelector :: ReadM Word32
+parseFunctionSelector = eitherReader ((\s -> aux (readHex s) s) . strip0x)
+  where
+    strip0x ('0':'x':s) = s
+    strip0x s           = s
+    aux [(i, "")] s | length s == 8 = return (fromIntegral i)
+                    | otherwise     = aux [] s
+    aux q         s = Left (printf "Invalid function selector: '%s'" s ++ show q)
+
+parseCheckAbi :: Parser CheckAbi
+parseCheckAbi =
+      ( flag' () ( long "abi-check"
+                <> help ( "Check ABI in metacontract: Only calls with  "
+                       ++ "permitted function selectors will be allowed. "
+                       ++ "Note that this doesn't work for contracts that "
+                       ++ "need to accept arbitrary data in their fallback "
+                       ++ "function."
+                        )
+                 )
+     *> ( Check
+      <$> many ( option parseFunctionSelector
+                 ( long "allow-fnsel"
+                <> metavar "FNSEL"
+                <> help ( "Allow a 4 byte function selector (hex-encoded). "
+                       ++ "Can be specified multiple times."
+                        )
+                 )
+               )
+        )
+      )
+  <|> ( flag' () ( long "no-abi-check"
+                <> help "Don't check ABI in metacontract."
+                 )
+     *> pure NoCheck
+      )
 
 data Command = Disassemble String
              | Instrument InstrumentMode A.Address String
-             | Metacontract [A.Address]
+             | Metacontract CheckAbi [A.Address]
              deriving (Eq, Show)
 
 parseAddress :: ReadM A.Address
@@ -78,7 +116,8 @@ parseCommand = subparser
     ( info
       ( helper
     <*> ( Metacontract
-      <$> some ( argument parseAddress
+      <$> parseCheckAbi
+      <*> some ( argument parseAddress
                  ( metavar "ADDRESS..."
                 <> help ( "Addresses of the heads. These addresses are "
                        ++ "hardcoded into the metacontract. The code at "
@@ -117,7 +156,7 @@ run (Options pmod cmd) = do
       parsed <- parseContract s
       instrumented <- instrument a parsed
       return . byteStringToHexString . assemble $ genericInitcode ++ instrumented
-    (Metacontract as) -> return . byteStringToHexString . assemble $ genericInitcode ++ (metacontract as)
+    (Metacontract ca heads) -> return . byteStringToHexString . assemble $ genericInitcode ++ (metacontract ca heads)
 
 
 eitherIO :: Either String String -> IO ()

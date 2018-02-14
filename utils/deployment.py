@@ -59,7 +59,7 @@ def get_all_signatures(source_file, omit=None):
         omit = []
     ct = get_contract_translator(source_file)
 
-    return ["0x{:x}".format(data['prefix'])
+    return ["0x{:08x}".format(data['prefix'])
             for (name, data) in ct.function_data.items()
             if name not in omit]
 
@@ -122,9 +122,16 @@ class HydraDeployment(metaclass=ABCMeta):
             #                                                abi_sigs, init_sig,
             #                                                debug=debug)
             self.logger.debug("CONSTRUCTING META-CONTRACT")
-            meta_contract_code = utils.decode_hex(check_output(
-                ["stack", "exec", "instrumenter-exe", "--", "metacontract"] + [utils.checksum_encode(a).lower() for a in all_addresses[1:]],
-                cwd=self.INSTRUMENTER_PATH).strip())
+            call_args = []
+            call_args.extend(["stack", "exec", "instrumenter-exe", "--"])
+            call_args.extend(["metacontract", "--abi-check"])
+            for abi_sig in abi_sigs:
+                call_args.extend(["--allow-fnsel", abi_sig])
+            if init_sig:
+                call_args.extend(["--allow-fnsel", init_sig]) #TODO(lorenzb): Change this once HYDRA_INIT support is implemented
+            call_args.extend(utils.checksum_encode(a).lower() for a in all_addresses[1:])
+            meta_contract_code = utils.decode_hex(
+                check_output(call_args, cwd=self.INSTRUMENTER_PATH).strip())
             mc_language = 'evm'
         else:
             # use a Meta-Contract implemented in a high-level language
@@ -323,7 +330,7 @@ class HydraDeployment(metaclass=ABCMeta):
             ct = get_contract_translator(head_file)
             data = ct.function_data['HYDRA_INIT']
             assert len(data['decode_types']) == 0
-            return "0x{:x}".format(data['prefix'])
+            return "0x{:08x}".format(data['prefix'])
 
         init_args = [_get_init_function_sig(head_file)
                      for head_file in self.paths_to_heads]

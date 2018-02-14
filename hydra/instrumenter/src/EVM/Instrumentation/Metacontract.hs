@@ -1,7 +1,9 @@
 module EVM.Instrumentation.Metacontract
-( metacontract
+( CheckAbi(..)
+, metacontract
 ) where
 
+import Data.Word
 import qualified EVM.Address as A
 import EVM.Bytecode (Opcode)
 import EVM.Instrumentation.Common
@@ -9,12 +11,17 @@ import EVM.While
 import qualified EVM.While.Macros as M
 import Util
 
-metacontract :: [A.Address] -> [Opcode]
-metacontract heads = fromRight $ compileAndLower procs mc
+data CheckAbi = NoCheck
+              | Check [Word32]
+              deriving (Eq, Show)
+
+metacontract :: CheckAbi -> [A.Address] -> [Opcode]
+metacontract ca heads = fromRight $ compileAndLower procs mc
     where procs = [ procHeadAddress heads
                   , procHeadCount heads
                   , procCallback
                   , procInner
+                  , procCheckAbi ca
                   , procPayBounty
                   , procOuter
                   , procReturndataload
@@ -22,7 +29,6 @@ metacontract heads = fromRight $ compileAndLower procs mc
                   ]
 
 -- TODO(lorenzb): Implement support for HYDRA_INIT!
--- TODO(lorenzb): Implement ABI checker
 
 slocOuterState = 0
 outerStateBountyPaid = 1
@@ -132,12 +138,28 @@ procInner = Proc "inner" [] "_" (Scope
             ,(Mstore (Sub (Var "returndata_offset") (Lit 0x20)) (Var "success1"))
             ,(Return (Sub (Var "returndata_offset") (Lit 0x20)) (Add (Var "returndata_size") (Lit 0x20)))])
 
+procCheckAbi ac =
+    Proc "checkAbi" [] "_" (aux ac)
+  where
+    aux NoCheck = Scope []
+    aux (Check fnsels) = let
+      check sel = (Assign "ok" (Or (Var "ok") (Eq (Lit sel) (Var "fnsel"))))
+      checks = Scope $ map (check . fromIntegral) fnsels
+      in Scope
+      [(Let "ok" (Lit 0))
+      ,(checkOrDie (M.leq (Lit 4) Calldatasize))
+      ,(Let "fnsel" (Div (Calldataload (Lit 0)) (Exp (Lit 2) (Lit 224))))
+      ,(Nest checks)
+      ,(checkOrDie (Var "ok"))
+      ]
+
 procPayBounty = Proc "payBounty" [] "_" (Scope [err errorTODO])
 
 -- Outer call knows three states:
 -- BountyPaid, MutexOn, MutexOff (default)
 procOuter = Proc "outer" [] "_" (Scope
-            [(Let "outer_state" (Sload (Lit slocOuterState)))
+            [(Discard (ProcCall "checkAbi" []))
+            ,(Let "outer_state" (Sload (Lit slocOuterState)))
             ,(M.if_ (Eq (Var "outer_state") (Lit outerStateBountyPaid)) (Scope [err errorTODO]))
             ,(M.if_ (Eq (Var "outer_state") (Lit outerStateMutexOn)) (Scope [err errorReentrancy]))
             ,(IfElse (Or (Eq (Var "outer_state") (Lit 0)) (Eq (Var "outer_state") (Lit outerStateMutexOff)))
