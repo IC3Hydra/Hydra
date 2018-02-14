@@ -33,7 +33,7 @@ data Expr = Lit Integer
           | Smod Expr Expr
           -- ADDMOD
           -- MULMOD
-          -- EXP
+          | Exp Expr Expr
           -- SIGNEXTEND
           | Lt Expr Expr
           | Gt Expr Expr
@@ -149,6 +149,7 @@ compExprAux ss e =
         (Sdiv e1 e2) -> aux2 ss SDIV e1 e2
         (Mod e1 e2) -> aux2 ss MOD e1 e2
         (Smod e1 e2) -> aux2 ss SMOD e1 e2
+        (Exp e1 e2) -> aux2 ss EXP e1 e2
         (Lt e1 e2) -> aux2 ss LT e1 e2
         (Gt e1 e2) -> aux2 ss GT e1 e2
         (Eq e1 e2) -> aux2 ss EQ e1 e2
