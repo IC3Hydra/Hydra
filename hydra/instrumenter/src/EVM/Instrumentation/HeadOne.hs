@@ -46,6 +46,9 @@ instrumentOps mc = concatMap aux
                                   [ ProcedureCall $ procTag "calldatacopy"
                                   , Op POP
                                   ]
+          aux (Op EXTCODESIZE)  = underflowGuard 1 ++
+                                  [ ProcedureCall $ procTag "extcodesize"
+                                  ]
           -- TODO(lorenzb): All ops that offset memory are vulnerable to overflow (MLOAD, MSTORE, MSTORE8, CALLDATALOAD, ...)
           aux (Op MLOAD)        = underflowGuard 1 ++
                                   [ ProcedureCall $ procTag "offsetMem"
@@ -145,6 +148,7 @@ procs mc = [ procMemcpyPrecomp
            , procDone
            , procCalldataload
            , procCalldatacopy
+           , procExtcodesize
            , procInit
            , procMc mc
            , procUnknownJumpdest
@@ -189,6 +193,22 @@ procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "_" (Scope
                          (Scope [(Calldatacopy (offsetMem (Var "dst"))
                                                (Add (min_ (Var "src") (Lit maxMem)) (Lit 0x60))
                                                (Var "size"))]))])
+
+procExtcodesize = Proc "extcodesize" ["address"] "size" (Scope
+                  [(Let "record_ptr" getTracePtr)
+                  -- get balance
+                  ,(Assign "size" (Extcodesize (Var "address")))
+                  -- store event type in trace
+                  ,(Mstore (Var "record_ptr") (Lit 7))
+                  ,(M.inc "record_ptr" (Lit 0x20))
+                  -- store address in trace
+                  ,(Mstore (Var "record_ptr") (Var "address"))
+                  ,(M.inc "record_ptr" (Lit 0x20))
+                  -- store size in trace
+                  ,(Mstore (Var "record_ptr") (Var "size"))
+                  ,(M.inc "record_ptr" (Lit 0x20))
+                  -- update trace length
+                  ,(setTracePtr (Var "record_ptr"))])
 
 procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", "topic3", "topic4"] "_" (Scope
           [(IfElse (Var "in_size")

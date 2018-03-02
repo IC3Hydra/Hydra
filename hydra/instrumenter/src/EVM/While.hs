@@ -58,7 +58,7 @@ data Expr = Lit Integer
           -- CODESIZE
           -- CODECOPY
           -- GASPRICE
-          -- EXTCODESIZE
+          | Extcodesize Expr
           -- EXTCODECOPY
           | Returndatasize
           -- RETURNDATACOPY is a statement
@@ -167,6 +167,7 @@ compExprAux ss e =
         Callvalue -> aux0 ss CALLVALUE
         (Calldataload e) -> aux1 ss CALLDATALOAD e
         Calldatasize -> aux0 ss CALLDATASIZE
+        (Extcodesize e) -> aux1 ss EXTCODESIZE e
         Returndatasize -> aux0 ss RETURNDATASIZE
         (Mload e) -> aux1 ss MLOAD e
         (Sload e) -> aux1 ss SLOAD e

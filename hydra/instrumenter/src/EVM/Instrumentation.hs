@@ -48,7 +48,6 @@ checkInstrumentable ops = case errors of {[] -> Right (); _ -> Left errors}
                                        then Just (n, show op ++ " is a forbidden operation. Cannot instrument.")
                                        else Nothing) [1..]
           forbidden = [ CODESIZE, CODECOPY
-                      , EXTCODESIZE
                       , EXTCODECOPY
                       , CREATE, CALLCODE
                       , DELEGATECALL, SELFDESTRUCT

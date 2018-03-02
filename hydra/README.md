@@ -80,6 +80,7 @@ Record format:
 - `LOG4`: `[4, keccak256([keccak256(logdata), topic1, topic2, topic3, topic4])]`
 - `CALL`: `[5, keccak256([keccak256(calldata), to, value]), success, output_size] ++ output`
 - `BALANCE`: `[6, address, balance(address)]`
+- `EXTCODESIZE`: `[7, address, extcodesize(address)]`
 
 Due to the unclear semantics of advancing the trace inside a FAILing callframe, we forbid this behaviour for now.
 TODO(lorenzb): Actually implement the corresponding asserts (done for HeadN, not for HeadOne)

@@ -251,6 +251,18 @@ contract EquivalenceHead1 {
         }
     }
 
+    function testExtcodesize(address distort) {
+        assembly {
+            let size := extcodesize(address)
+            mstore(0x00, gt(size, 0))
+            log1(0, 100, 1337)
+
+            size := extcodesize(distort)
+            mstore(0x00, size)
+            log1(0, 100, 1337)
+        }
+    }    
+
     function testSelfCalls() {
         assembly {
             let success := 0

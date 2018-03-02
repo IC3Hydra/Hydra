@@ -102,6 +102,7 @@ class TestHydra(PyEthereumTestCase):
             ("testMemory2", [self.external_distort.address]),
             ("testSha3", []),
             ("testExternalCalls", [self.external_distort.address]),
+            ("testExtcodesize", [self.external_distort.address]),            
             ("testSelfCalls", []),
         ]
 

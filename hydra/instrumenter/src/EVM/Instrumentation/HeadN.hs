@@ -41,6 +41,9 @@ instrumentOps mc = concatMap aux
                                   [ ProcedureCall $ procTag "calldatacopy"
                                   , Op POP
                                   ]
+          aux (Op EXTCODESIZE)  = underflowGuard 1 ++
+                                  [ ProcedureCall $ procTag "extcodesize"
+                                  ]
           -- TODO(lorenzb): All ops that offset memory are vulnerable to overflow (MLOAD, MSTORE, MSTORE8, CALLDATALOAD, ...)
           aux (Op MLOAD)        = underflowGuard 1 ++
                                   [ ProcedureCall $ procTag "offsetMem"
@@ -140,6 +143,7 @@ procs mc = [ procMemcpyNoalias
            , procCalldatacopy
            , procCalldataload
            , procCalldatasize
+           , procExtcodesize
            , procInit
            , procMc mc
            , procUnknownJumpdest
@@ -229,6 +233,16 @@ procCalldatacopy = Proc "calldatacopy" ["dst", "src", "size"] "data" (Scope
                                 ,(Calldatacopy (Add (Var "dst") (Var "copy"))
                                                Calldatasize
                                                (Sub (Var "size") (Var "copy")))]))])
+
+procExtcodesize = Proc "extcodesize" ["address"] "size" (Scope
+                  [(Let "trace_ptr" getTracePtr)
+                  ,(checkOrErr disagreement (Eq (Lit 7) (Calldataload (Var "trace_ptr"))))
+                  ,(M.inc "trace_ptr" (Lit 0x20))
+                  ,(checkOrErr disagreement (Eq (Var "address") (Calldataload (Var "trace_ptr"))))
+                  ,(M.inc "trace_ptr" (Lit 0x20))
+                  ,(Assign "size" (Calldataload (Var "trace_ptr")))
+                  ,(M.inc "trace_ptr" (Lit 0x20))
+                  ,(setTracePtr (Var "trace_ptr"))])
 
 procLog = Proc "log" ["num_topics", "in_offset", "in_size", "topic1", "topic2", "topic3", "topic4"] "_" (Scope
           [(M.if_ (Var "in_size")
